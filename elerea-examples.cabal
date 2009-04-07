@@ -3,7 +3,14 @@ Version:             0.1.0
 Cabal-Version:       >= 1.2
 Synopsis:            Example applications for Elerea
 Category:            reactivity, FRP
-Description:         Example applications for Elerea
+Description:
+
+  Example applications for Elerea. They are factored out into their
+  own package so as to avoid unnecessary dependencies in the library.
+  .
+  For the time being, there is only a simple breakout clone in this
+  package.
+
 Author:              Patai Gergely
 Maintainer:          Patai Gergely (patai@iit.bme.hu)
 Copyright:           (c) 2009, Patai Gergely
