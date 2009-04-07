@@ -1,0 +1,20 @@
+Name:                elerea-examples
+Version:             0.1.0
+Cabal-Version:       >= 1.2
+Synopsis:            Example applications for Elerea
+Category:            reactivity, FRP
+Description:         Example applications for Elerea
+Author:              Patai Gergely
+Maintainer:          Patai Gergely (patai@iit.bme.hu)
+Copyright:           (c) 2009, Patai Gergely
+License:             BSD3
+License-File:        LICENSE
+Stability:           experimental
+Build-Type:          Simple
+
+Executable elerea-breakout
+  Executable:        elerea-breakout
+  HS-Source-Dirs:    src/Breakout
+  Main-IS:           Main.lhs
+  Build-Depends:     base, elerea, OpenGL, GLFW
+  GHC-Options:       -Wall -O2
