@@ -20,12 +20,12 @@
 >   windowSizeCallback $= resizeGLScene windowSizeSink
 >   initGL 640 480
 > 
->   driveNetwork (chase mousePress mousePosition windowSize)
+>   driveNetwork (breakout mousePress mousePosition windowSize)
 >                (readInput mousePositionSink mousePressSink)
 > 
 >   closeWindow
 > 
-> chase mousePress mousePos windowSize = render <$> windowSize <*> mousePos <*> ballPos
+> breakout mousePress mousePos windowSize = render <$> windowSize <*> mousePos <*> ballPos
 >     where ballPos = integralVec vnull ballVel
 >           ballVel = latcher (integralVec vnull ballAcc)
 >                             (edge mousePress)

@@ -29,7 +29,7 @@
 >     where ballPos = integralVec vnull ballVel
 >           ballVel = latcher (integralVec vnull ballAcc)
 >                             (edge mousePress)
->                             (integralVec <$> ballPos^-^mousePos <*> pure ballAcc)
+>                             (integralVec <$> ballVel^+^ballPos^-^mousePos <*> pure ballAcc)
 >           ballAcc = (mousePos^-^ballPos)^*.0.3
 > 
 > render (V w h) (V cx cy) (V ox oy) = do
