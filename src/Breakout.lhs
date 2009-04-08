@@ -2,6 +2,7 @@
 > 
 > import Control.Applicative
 > import Control.Monad
+> import Data.List
 > import FRP.Elerea
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
@@ -29,9 +30,13 @@
 > ballW = 0.04
 > ballH = 0.04
 > 
-> brickW = 0.03
-> brickH = 0.02
-> 
+> brickW = 0.05
+> brickH = 0.03
+> brickPos0 = distributeBricks (-0.7) (-0.1) (0.7) (0.4) 18 10
+>     where distributeBricks xmin ymin xmax ymax xn yn = [(xmin+xstep*x,ymin+ystep*y,Nothing) | x <- [0..xn-1], y <- [0..yn-1]]
+>               where xstep = (xmax-xmin-xn*brickW)/(xn-1)+brickW
+>                     ystep = (ymax-ymin-yn*brickH)/(yn-1)+brickH
+
 > playerY = -fieldH+0.01
 > playerW = 0.2
 > playerH = 0.03
@@ -51,7 +56,7 @@
 > (&&@) :: Signal Bool -> Signal Bool -> Signal Bool
 > (&&@) = liftA2 (&&)
 > 
-> breakout mousePress mousePos windowSize = renderLevel <$> playerX <*> ballPos
+> breakout mousePress mousePos windowSize = renderLevel <$> playerX <*> ballPos <*> (getBricks <$> bricks)
 >     where playerX = adjustPlayerPos <$> mousePos <*> windowSize
 >           adjustPlayerPos (V x _) (V w _) = min (fieldW-playerW) $ max (-fieldW) $ 2*x/w-1-playerW/2
 >
@@ -63,21 +68,25 @@
 >                     y = if cv || cp then -bvy else bvy
 >           ballNewVelX = (getX <$> ballPos)-playerX-pure (playerW/2)
 >
->           ballCollHorz = edge (check <$> ballPos <*> ballVel)
+>           ballCollHorz = edge ((getHColl <$> bricks) ||@ (check <$> ballPos <*> ballVel))
 >               where check (V bx _) (V bvx _) = (bx < -fieldW && bvx < 0) || (bx > fieldW-ballW && bvx > 0)
->           ballCollVert = edge (check <$> ballPos <*> ballVel)
+>           ballCollVert = edge ((getVColl <$> bricks) ||@ (check <$> ballPos <*> ballVel))
 >               where check (V bx by) (V _ bvy) = by > fieldH-ballH && bvy > 0
 >           ballCollPlayer = edge (check <$> ballPos <*> playerX)
 >               where check (V bx by) px = doRectsIntersect bx by ballW ballH px playerY playerW playerH
 >
->           {- (collBricks,remBricks) = partition (\(x,y) -> collRects ballX ballY ballW ballH x y brickW brickH) bricks
->           brickCollisionHorz = or collBricksHorz
->           brickCollisionVert = or $ map not collBricksHorz
->           collBricksHorz = map isHorz doRectsIntersect
->           isHorz (x,y) = xDist > yDist
->               where xDist = abs ((x+brickW/2)-(ballX+ballW/2))
->                     yDist = abs ((y+brickH/2)-(ballY+ballH/2))
->           newBallVX = ((ballX+ballW/2)-(playerX+playerW/2))+ballVX -}
+>           bricks = transfer (False,False,brickPos0) updateBricks ballPos
+>           getBricks (_,_,bs) = bs
+>           getHColl (c,_,_) = c
+>           getVColl (_,c,_) = c
+>           updateBricks dt (V bx by) (_,_,bricksPrev) = (collHorz,collVert,bricksRem)
+>               where (bricksDel,bricksRem) = partition (\(x,y,a) -> if a == Nothing then doRectsIntersect bx by ballW ballH x y brickW brickH else False) bricksPrev
+>                     collHorz = or collHBricks
+>                     collVert = or (map not collHBricks)
+>                     collHBricks = map isHorz bricksDel
+>                     isHorz (x,y,_) = xDist/brickW > yDist/brickH
+>                         where xDist = abs ((x+brickW/2)-(bx+ballW/2))
+>                               yDist = abs ((y+brickH/2)-(by+ballH/2))
 
 anim = proc [quitKey,leftKey,rightKey] -> do
          let pm b = if b then 3 else 0 :: GLfloat
@@ -110,7 +119,7 @@ level = proc playerX -> do
 > doRectsIntersect x1 y1 sx1 sy1 x2 y2 sx2 sy2 = collIV x1 sx1 x2 sx2 && collIV y1 sy1 y2 sy2
 >     where collIV p1 s1 p2 s2 = (p1 <= p2 && p2 <= p1+s1) || (p2 <= p1 && p1 <= p2+s2)
 > 
-> renderLevel playerX (V ballX ballY) = do
+> renderLevel playerX (V ballX ballY) bricks = do
 >   let drawRect x y xs ys = do
 >         loadIdentity
 >         renderPrimitive Quads $ do
@@ -131,6 +140,11 @@ level = proc playerX -> do
 >
 >   color $ Color4 0.2 0.2 0.2 (1 :: GLfloat)
 >   drawRect (-fieldW) (-fieldH) (fieldW*2) (fieldH*2)
+>
+>   forM_ bricks $ \(x,y,a) -> do
+>     let alpha = maybe 1 id a
+>     color $ Color4 0.8 0.5 0.5 (alpha :: GLfloat)
+>     drawRect x y brickW brickH
 >
 >   color $ Color4 1 1 1 (0.6 :: GLfloat)
 >   drawEllipse ballX ballY ballW ballH 20
