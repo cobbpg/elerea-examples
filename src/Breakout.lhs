@@ -3,6 +3,7 @@
 > import Control.Applicative
 > import Control.Monad
 > import Data.List
+> import Data.Maybe
 > import FRP.Elerea
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
@@ -36,6 +37,7 @@
 >     where distributeBricks xmin ymin xmax ymax xn yn = [(xmin+xstep*x,ymin+ystep*y,Nothing) | x <- [0..xn-1], y <- [0..yn-1]]
 >               where xstep = (xmax-xmin-xn*brickW)/(xn-1)+brickW
 >                     ystep = (ymax-ymin-yn*brickH)/(yn-1)+brickH
+> brickFade = 0.5
 
 > playerY = -fieldH+0.01
 > playerW = 0.2
@@ -79,8 +81,14 @@
 >           getBricks (_,_,bs) = bs
 >           getHColl (c,_,_) = c
 >           getVColl (_,c,_) = c
->           updateBricks dt (V bx by) (_,_,bricksPrev) = (collHorz,collVert,bricksRem)
->               where (bricksDel,bricksRem) = partition (\(x,y,a) -> if a == Nothing then doRectsIntersect bx by ballW ballH x y brickW brickH else False) bricksPrev
+>           updateBricks dt (V bx by) (_,_,bricksPrev) = (collHorz,collVert,bricksNext)
+>               where bricksNext = catMaybes (map evolveBrick (map killBrick bricksDel++bricksRem))
+>                     (bricksDel,bricksRem) = partition classifyBrick bricksPrev
+>                     classifyBrick (x,y,a) = a == Nothing && doRectsIntersect bx by ballW ballH x y brickW brickH
+>                     evolveBrick (x,y,Just a) = if a < fade then Nothing else Just (x,y,Just (a-fade))
+>                         where fade = realToFrac dt*brickFade
+>                     evolveBrick b            = Just b
+>                     killBrick (x,y,_) = (x,y,Just 1)
 >                     collHorz = or collHBricks
 >                     collVert = or (map not collHBricks)
 >                     collHBricks = map isHorz bricksDel
@@ -142,8 +150,9 @@ level = proc playerX -> do
 >   drawRect (-fieldW) (-fieldH) (fieldW*2) (fieldH*2)
 >
 >   forM_ bricks $ \(x,y,a) -> do
->     let alpha = maybe 1 id a
->     color $ Color4 0.8 0.5 0.5 (alpha :: GLfloat)
+>     case a of
+>       Nothing -> color $ Color4 0.8 0.5 0.5 (0.6 :: GLfloat)
+>       Just a' -> color $ Color4 0.9 0.9 0.2 (a' :: GLfloat)
 >     drawRect x y brickW brickH
 >
 >   color $ Color4 1 1 1 (0.6 :: GLfloat)
