@@ -52,12 +52,6 @@
 > vec :: GLfloat -> GLfloat -> Signal Vec
 > vec x y = pure (V x y)
 >
-> (||@) :: Signal Bool -> Signal Bool -> Signal Bool
-> (||@) = liftA2 (||)
-> 
-> (&&@) :: Signal Bool -> Signal Bool -> Signal Bool
-> (&&@) = liftA2 (&&)
-> 
 > breakout mousePress mousePos windowSize = renderLevel <$> playerX <*> ballPos <*> (getBricks <$> bricks)
 >     where playerX = adjustPlayerPos <$> mousePos <*> windowSize
 >           adjustPlayerPos (V x _) (V w _) = min (fieldW-playerW) $ max (-fieldW) $ 2*x/w-1-playerW/2
@@ -87,7 +81,7 @@
 >                     classifyBrick (x,y,a) = a == Nothing && doRectsIntersect bx by ballW ballH x y brickW brickH
 >                     evolveBrick (x,y,Just a) = if a < fade then Nothing else Just (x,y,Just (a-fade))
 >                         where fade = realToFrac dt*brickFade
->                     evolveBrick b            = Just b
+>                     evolveBrick b = Just b
 >                     killBrick (x,y,_) = (x,y,Just 1)
 >                     collHorz = or collHBricks
 >                     collVert = or (map not collHBricks)
@@ -95,35 +89,7 @@
 >                     isHorz (x,y,_) = xDist/brickW > yDist/brickH
 >                         where xDist = abs ((x+brickW/2)-(bx+ballW/2))
 >                               yDist = abs ((y+brickH/2)-(by+ballH/2))
-
-anim = proc [quitKey,leftKey,rightKey] -> do
-         let pm b = if b then 3 else 0 :: GLfloat
-         playerX <- integral -< pm rightKey - pm leftKey
-         rec (ballX,ballY,bricks,death) <- drSwitch level -< (playerX,tag death level)
-         let rectData = createModel playerX ballX ballY bricks
-         returnA -< (rectData,quitKey)
-
-level = proc playerX -> do
-          rec
-            let (collBricks,remBricks) = partition (\(x,y) -> collRects ballX ballY ballW ballH x y brickW brickH) bricks
-                brickCollisionHorz = or collBricksHorz
-                brickCollisionVert = or $ map not collBricksHorz
-                collBricksHorz = map isHorz collBricks
-                isHorz (x,y) = xDist > yDist
-                    where xDist = abs ((x+brickW/2)-(ballX+ballW/2))
-                          yDist = abs ((y+brickH/2)-(ballY+ballH/2))
-                newBallVX = ((ballX+ballW/2)-(playerX+playerW/2))+ballVX
-            ballX <- imIntegral ballX0 -< ballVX
-            ballY <- imIntegral ballY0 -< ballVY
-            ballVX <- dHold ballVX0 -< tag ballCollisionHorz (-ballVX) `merge` tag playerCollision newBallVX
-            ballVY <- dHold ballVY0 -< tag (ballCollisionVert `merge` playerCollision) (-ballVY) 
-            ballCollisionHorz <- edge -< (ballX < -fieldW && ballVX < 0) || (ballX > fieldW-ballW && ballVX > 0) || brickCollisionHorz
-            ballCollisionVert <- edge -< (ballY > fieldH-ballH && ballVY > 0) || brickCollisionVert
-            playerCollision <- edge -< collRects ballX ballY ballW ballH playerX playerY playerW playerH
-            death <- edge -< ballY < -fieldH
-            bricks <- iPre [(x,y) | x <- [-2.5,-2..2.5], y <- [-0.5,-0.1..1.5]] -< remBricks
-          returnA -< (ballX,ballY,bricks,death)
-
+>
 > doRectsIntersect x1 y1 sx1 sy1 x2 y2 sx2 sy2 = collIV x1 sx1 x2 sx2 && collIV y1 sy1 y2 sy2
 >     where collIV p1 s1 p2 s2 = (p1 <= p2 && p2 <= p1+s1) || (p2 <= p1 && p1 <= p2+s2)
 > 

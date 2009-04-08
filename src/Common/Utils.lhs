@@ -18,3 +18,10 @@
 > integral v0 s = transfer v0 (\dt v v0 -> v0+v*realToFrac dt) s
 >
 > integralVec v0 s = transfer v0 (\dt v v0 -> v0^+^(v^*.realToFrac dt)) s
+>
+> (||@) :: Signal Bool -> Signal Bool -> Signal Bool
+> (||@) = liftA2 (||)
+> 
+> (&&@) :: Signal Bool -> Signal Bool -> Signal Bool
+> (&&@) = liftA2 (&&)
+
