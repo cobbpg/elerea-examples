@@ -8,8 +8,12 @@ Description:
   Example applications for Elerea. They are factored out into their
   own package so as to avoid unnecessary dependencies in the library.
   .
-  For the time being, there is only a simple breakout clone in this
-  package.
+  The programs included are the following:
+  .
+  * chase: a minimal example that demonstrates reactivity and mutually
+    recursive signals
+  .
+  * breakout: a not too fancy breakout clone
 
 Author:              Patai Gergely
 Maintainer:          Patai Gergely (patai@iit.bme.hu)
@@ -21,7 +25,14 @@ Build-Type:          Simple
 
 Executable elerea-breakout
   Executable:        elerea-breakout
-  HS-Source-Dirs:    src/Breakout
-  Main-IS:           Main.lhs
+  HS-Source-Dirs:    src
+  Main-IS:           Breakout.lhs
   Build-Depends:     base, elerea, OpenGL, GLFW
-  GHC-Options:       -Wall -O2
+  GHC-Options:       -O2
+
+Executable elerea-chase
+  Executable:        elerea-chase
+  HS-Source-Dirs:    src
+  Main-IS:           Chase.lhs
+  Build-Depends:     base, elerea, OpenGL, GLFW
+  GHC-Options:       -O2
