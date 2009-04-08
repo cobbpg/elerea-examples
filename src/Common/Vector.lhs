@@ -6,7 +6,7 @@
 > import FRP.Elerea
 > import Graphics.Rendering.OpenGL
 >
-> data Vec = V !Float !Float
+> data Vec = V { getX :: !Float, getY :: !Float }
 >
 > infixl 7 ^*.
 > infixl 7 .*^
