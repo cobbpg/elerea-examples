@@ -1,4 +1,5 @@
-\ignore{
+Elerea Breakout example
+=======================
 
 > module Main where
 > 
@@ -14,11 +15,8 @@
 > import Common.Utils
 > import Common.Vector
 
-}
-
-\section{Game constants}
-
-\subsection{Moving objects}
+Global constants
+----------------
 
 The dimensions of the ball, which behaves as a rectangle in collision
 detection, but is drawn as an ellipse.
@@ -36,8 +34,6 @@ The dimensions and vertical position of the player.
 > playerW = 0.2
 > playerH = 0.03
 > playerY = -fieldH+0.01
-
-\subsection{Field}
 
 The dimensions of the field
 
@@ -61,9 +57,8 @@ gives the fadeout time in seconds.
 
 > brickFade = 0.5
 
-\section{Game logic}
-
-\subsection{Entry point}
+Game logic
+----------
 
 > main = do
 >   -- Creating a window without a depth buffer
@@ -88,20 +83,16 @@ gives the fadeout time in seconds.
 >   -- The inevitable sad ending
 >   closeWindow
 
-\subsection{The main signal}
-
-The |breakout| function creates a reactive signal that carries the
+The `breakout` function creates a reactive signal that carries the
 rendering actions to be performed at each instant.  The principal
 signals forming the game logic are the following:
 
-\begin{itemize}
-\item |playerX|: the position of the player, a direct function of the
-moise position;
-\item |ballPos|: the position of the ball given as an integral of its
-velocity, |ballVel|;
-\item |bricks|: the collection of live and dying bricks along with
-collision information.
-\end{itemize}
+* `playerX`: the position of the player, a direct function of the
+   mouse position;
+* `ballPos`: the position of the ball given as an integral of its
+   velocity, `ballVel`;
+* `bricks`: the collection of live and dying bricks along with
+   collision information.
 
 The position and velocity of the ball form a circular dependency, as
 velocity is changed whenever a collision is detected, which is a
@@ -124,8 +115,7 @@ elsewhere too.
 >           ballPos = integralVec (ballPos0) ballVel
 >           ballVel = latcher (pure ballVel0)
 >                             (ballCollHorz ||@ ballCollVert ||@ ballCollPlayer)
->                             (pure <$> (adjustVel <$> ballCollHorz <*>
->                                        ballCollVert <*> ballCollPlayer <*>
+>                             (pure <$> (adjustVel <$> ballCollHorz <*> ballCollVert <*> ballCollPlayer <*>
 >                                        ballVel <*> ballNewVelX))
 >
 >           -- The new velocity given the type of collision
@@ -169,15 +159,15 @@ elsewhere too.
 >                         where xDist = abs ((x+brickW/2)-(bx+ballW/2))
 >                               yDist = abs ((y+brickH/2)-(by+ballH/2))
 
-The |doRectsIntersect| decides whether two rectangles defined by their
+The `doRectsIntersect` decides whether two rectangles defined by their
 top left corner and dimensions overlap.
 
 > doRectsIntersect x1 y1 sx1 sy1 x2 y2 sx2 sy2 = collIV x1 sx1 x2 sx2 && collIV y1 sy1 y2 sy2
 >     where collIV p1 s1 p2 s2 = (p1 <= p2 && p2 <= p1+s1) || (p2 <= p1 && p1 <= p2+s2)
 
-The |renderLevel| function takes a snapshot of the game and turns it
+The `renderLevel` function takes a snapshot of the game and turns it
 into an IO action that displays this snapshot on the screen.  The
-|breakout| signal is the time-varying version of this IO action.
+`breakout` signal is the time-varying version of this IO action.
 
 > renderLevel playerX (V ballX ballY) bricks = do
 >   let drawRect x y xs ys = do
@@ -216,15 +206,16 @@ into an IO action that displays this snapshot on the screen.  The
 >   flush
 >   swapBuffers
 
-\subsection{Backend}
+Backend
+-------
 
-The |readInput| function has two responsibilities: it provides input
-for the peripheral signals |mousePosition| and |mousePress| through
+The `readInput` function has two responsibilities: it provides input
+for the peripheral signals `mousePosition` and `mousePress` through
 their associated sinks, and also feeds the time difference between two
 states into the system, deciding when to exit altogether (by returning
-|Nothing| instead of the current |dt| value wrapped in |Just|).
+`Nothing` instead of the current `dt` value wrapped in `Just`).
 
-The |threadDelay| call at the beginning is just a trick to give the
+The `threadDelay` call at the beginning is just a trick to give the
 scheduler a breath.  It will cause a wait equal to a scheduler tick,
 which is 20ms by default.  The program can run perfectly without it,
 but it eats up all the free CPU to produce an unnecessarily high frame
@@ -241,7 +232,7 @@ rate.
 >   k <- getKey ESC
 >   return (if k == Press then Nothing else Just t)
 
-The |initGL| function sets up almost nothing, which means that most
+The `initGL` function sets up almost nothing, which means that most
 functionality is turned off.  Only alpha blending is enabled to
 provide some minimalistic eye candy.
 
@@ -251,7 +242,7 @@ provide some minimalistic eye candy.
 >   blendFunc $= (SrcAlpha,OneMinusSrcAlpha)
 >   cullFace $= Just Back
 
-The resize callback feeds the |windowSize| signal through its sink
+The resize callback feeds the `windowSize` signal through its sink
 besides adjusting the projection matrix.
 
 > resizeGLScene winSize size@(Size w h) = do
