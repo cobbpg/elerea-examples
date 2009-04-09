@@ -1,3 +1,14 @@
+Elerea Chase example
+====================
+
+This is a minimal example to show how to define signals that can be
+mutually recursive and can optionally depend on user input too.  The
+grey square accelerates towards the red square at a rate proportional
+to their relative position, and it can be given a momentary impulse
+with the left mouse button.
+
+For a slightly more complex example check out `Breakout.lhs`.
+
 > module Main where
 > 
 > import Control.Applicative
@@ -7,7 +18,12 @@
 > 
 > import Common.Utils
 > import Common.Vector
->
+
+The `main` function contains the whole reactive logic.  Note that
+`driveNetwork` is just a wrapper around the `superstep` function of
+the core library, and you can see its source below in the `Utils`
+module.
+
 > main = do
 >   initialize
 >   openWindow (Size 640 480) [DisplayRGBBits 8 8 8, DisplayAlphaBits 8, DisplayDepthBits 24] Window
@@ -20,18 +36,22 @@
 >   windowSizeCallback $= resizeGLScene windowSizeSink
 >   initGL 640 480
 > 
->   driveNetwork (chase mousePress mousePosition windowSize)
+>   let ballPos = integralVec vnull ballVel
+>       ballVel = latcher (integralVec vnull ballAcc)
+>                         (edge mousePress)
+>                         (integralVec <$> ballVel^+^ballPos^-^mousePosition <*> pure ballAcc)
+>       ballAcc = (mousePosition^-^ballPos)^*.0.3
+>
+>   driveNetwork (render <$> windowSize <*> mousePosition <*> ballPos)
 >                (readInput mousePositionSink mousePressSink)
 > 
 >   closeWindow
-> 
-> chase mousePress mousePos windowSize = render <$> windowSize <*> mousePos <*> ballPos
->     where ballPos = integralVec vnull ballVel
->           ballVel = latcher (integralVec vnull ballAcc)
->                             (edge mousePress)
->                             (integralVec <$> ballVel^+^ballPos^-^mousePos <*> pure ballAcc)
->           ballAcc = (mousePos^-^ballPos)^*.0.3
-> 
+
+The `render` function takes a snapshot of the system (window size and
+the positions of the squares) and turns it into OpenGL calls.  The
+signal executed by the `driveNetwork` function is the time-varying
+version of the IO action returned here.
+
 > render (V w h) (V cx cy) (V ox oy) = do
 >   let drawSquare x y s = do
 >         loadIdentity
@@ -51,7 +71,11 @@
 > 
 >   flush
 >   swapBuffers
->
+
+The `readInput` function provides the driver layer.  It feeds the
+peripheral-bound signals and also decides when to stop execution by
+returning `Nothing` instead of the time elapsed since its last call.
+
 > readInput mousePos mouseBut = do
 >   t <- get GLFW.time
 >   GLFW.time $= 0
@@ -61,13 +85,18 @@
 >   mouseBut (b == GLFW.Press)
 >   k <- getKey ESC
 >   return (if k == Press then Nothing else Just t)
-> 
+
+OpenGL is initialised with practically everything turned off.  Only
+alpha blending is needed to be able to use translucent colours.
+
 > initGL width height = do
 >   clearColor $= Color4 0 0 0 1
 >   blend $= Enabled
 >   blendFunc $= (SrcAlpha,OneMinusSrcAlpha)
->   cullFace $= Just Back
-> 
+
+The window size callback takes care of the `windowSize` signal and the
+projection matrix.
+
 > resizeGLScene winSize size@(Size w h) = do
 >   winSize (V (fromIntegral w) (fromIntegral h))
 > 

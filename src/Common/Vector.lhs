@@ -1,3 +1,10 @@
+Vector module
+=============
+
+This module contains a class for two-dimensional vectors, a strict
+datatype to instantiate it, and another instance for signals of the
+same type.
+
 > {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 >
 > module Common.Vector where
