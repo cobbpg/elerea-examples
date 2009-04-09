@@ -28,15 +28,20 @@ edge on the input.  We are relying on the delay introduced by the
 
 > edge b = (transfer False (\dt b _ -> not b) b) &&@ b
 
-A scalar integral function.
+A scalar integral function.  Since it is based on `transfer`, it is
+delayed by one superstep, i.e. the value of the input signal in the
+n<sup>th</sup> step affects its output only in the (n+1)<sup>th</sup>
+step.
 
 > integral v0 s = transfer v0 (\dt v v0 -> v0+v*realToFrac dt) s
 
-An integral function for two-dimensional vectors defined in the `Vector` module.
+An integral function for two-dimensional vectors defined in the
+`Vector` module with the same caveat.
 
 > integralVec v0 s = transfer v0 (\dt v v0 -> v0^+^(v^*.realToFrac dt)) s
 
-Logic relations lifted into signals.  Useful to combine event-like signals.
+Logic relations lifted into signals.  Useful to combine event-like
+signals.
 
 > (||@) :: Signal Bool -> Signal Bool -> Signal Bool
 > (||@) = liftA2 (||)

@@ -19,6 +19,8 @@ User input is also seen as a signal from inside the reactive part,
 while the imperative framework is given a sink fuction to update it as
 needed.  Type safety is ensured all the way.
 
+<img src="Breakout.png" alt="Elerea Breakout in action" />
+
 Below follows the full source of the example.
 
 > module Main where
@@ -86,9 +88,9 @@ Game logic
 ----------
 
 The entry point performs some lightweight initialisation, and defines
-the three user-driven signals: window size, mouse position and left
-button state.  The `external` function creates the signal and the
-corresponding sink at the same time.
+the two user-driven signals: window size and mouse position.  The
+`external` function creates the signal and the corresponding sink at
+the same time.
 
 When all is done `driveNetwork` is invoked.  It is not a library
 function, but part of the tiny `Utils` module .
