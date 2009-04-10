@@ -22,6 +22,15 @@ License:             BSD3
 License-File:        LICENSE
 Stability:           experimental
 Build-Type:          Simple
+Extra-Source-Files:
+  src/Common/Vector.lhs
+  src/Common/Utils.lhs
+
+  doc/Breakout.html
+  doc/Breakout.png
+  doc/Chase.html
+  doc/hscolour.css
+  doc/Makefile
 
 Executable elerea-breakout
   Executable:        elerea-breakout
