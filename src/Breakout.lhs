@@ -28,6 +28,7 @@ Below follows the full source of the example.
 > import Control.Applicative
 > import Control.Concurrent
 > import Control.Monad
+> import Data.IORef
 > import Data.List
 > import Data.Maybe
 > import FRP.Elerea
@@ -106,13 +107,15 @@ function, but part of the tiny `Utils` module .
 >   (mousePosition,mousePositionSink) <- external vnull
 > 
 >   -- Wrapping up the init phase
+>   closed <- newIORef False
 >   windowSizeCallback $= resizeGLScene windowSizeSink
+>   windowCloseCallback $= writeIORef closed True
 >   initGL 640 480
 > 
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
 >   driveNetwork (breakout mousePosition windowSize)
->                (readInput mousePositionSink)
+>                (readInput mousePositionSink closed)
 > 
 >   -- The inevitable sad ending
 >   closeWindow
@@ -278,14 +281,15 @@ which is 20ms by default.  The program can run perfectly without it,
 but it eats up all the free CPU to produce an unnecessarily high frame
 rate.
 
-> readInput mousePos = do
+> readInput mousePos closed = do
 >   threadDelay 0
 >   t <- get GLFW.time
 >   GLFW.time $= 0
 >   Position x y <- get GLFW.mousePos
 >   mousePos (V (fromIntegral x) (fromIntegral y))
 >   k <- getKey ESC
->   return (if k == Press then Nothing else Just t)
+>   c <- readIORef closed
+>   return (if c || k == Press then Nothing else Just t)
 
 The `initGL` function sets up almost nothing, which means that most
 functionality is turned off.  Only alpha blending is enabled to

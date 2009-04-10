@@ -12,6 +12,7 @@ For a slightly more complex example check out `Breakout.lhs`.
 > module Main where
 > 
 > import Control.Applicative
+> import Data.IORef
 > import FRP.Elerea
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
@@ -33,7 +34,9 @@ module.
 >   (mousePosition,mousePositionSink) <- external vnull
 >   (mousePress,mousePressSink) <- external False
 > 
+>   closed <- newIORef False
 >   windowSizeCallback $= resizeGLScene windowSizeSink
+>   windowCloseCallback $= writeIORef closed True
 >   initGL 640 480
 > 
 >   let ballPos = integralVec vnull ballVel
@@ -43,7 +46,7 @@ module.
 >       ballAcc = (mousePosition^-^ballPos)^*.0.3
 >
 >   driveNetwork (render <$> windowSize <*> mousePosition <*> ballPos)
->                (readInput mousePositionSink mousePressSink)
+>                (readInput mousePositionSink mousePressSink closed)
 > 
 >   closeWindow
 
@@ -76,7 +79,7 @@ The `readInput` function provides the driver layer.  It feeds the
 peripheral-bound signals and also decides when to stop execution by
 returning `Nothing` instead of the time elapsed since its last call.
 
-> readInput mousePos mouseBut = do
+> readInput mousePos mouseBut closed = do
 >   t <- get GLFW.time
 >   GLFW.time $= 0
 >   Position x y <- get GLFW.mousePos
@@ -84,7 +87,8 @@ returning `Nothing` instead of the time elapsed since its last call.
 >   b <- GLFW.getMouseButton GLFW.ButtonLeft
 >   mouseBut (b == GLFW.Press)
 >   k <- getKey ESC
->   return (if k == Press then Nothing else Just t)
+>   c <- readIORef closed
+>   return (if c || k == Press then Nothing else Just t)
 
 OpenGL is initialised with practically everything turned off.  Only
 alpha blending is needed to be able to use translucent colours.
