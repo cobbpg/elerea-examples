@@ -11,7 +11,6 @@ same type.
 >
 > import Control.Applicative
 > import FRP.Elerea
-> import Graphics.Rendering.OpenGL
 >
 > data Vec = V { getX :: !Float, getY :: !Float }
 >
