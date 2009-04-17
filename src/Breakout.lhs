@@ -32,6 +32,7 @@ Below follows the full source of the example.
 > import Data.List
 > import Data.Maybe
 > import FRP.Elerea
+> import FRP.Elerea.Graph
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
 > 
@@ -114,11 +115,14 @@ function, but part of the tiny `Utils` module .
 > 
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
->   driveNetwork (breakout mousePosition windowSize)
+>   let game = breakout mousePosition windowSize
+>   driveNetwork game
 >                (readInput mousePositionSink closed)
 > 
 >   -- The inevitable sad ending
 >   closeWindow
+>
+>   signalToDot game
 
 The `breakout` function creates a reactive signal that carries the
 rendering actions to be performed at each instant.  The principal
