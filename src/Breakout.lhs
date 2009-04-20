@@ -21,6 +21,14 @@ needed.  Type safety is ensured all the way.
 
 <img src="Breakout.png" alt="Elerea Breakout in action" />
 
+You can also have the program output the signal structure in
+[Graphviz](http://www.graphviz.org/) dot format with the `--dump-dot`
+switch after the game is over.  For instance, if Graphviz is
+installed, you can get an SVG rendition of the graph using the
+following command:
+
+`elerea-breakout --dump-dot | dot -Tsvg -o breakout.svg`
+
 Below follows the full source of the example.
 
 > module Main where
@@ -35,6 +43,7 @@ Below follows the full source of the example.
 > import FRP.Elerea.Graph
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
+> import System.Environment
 > 
 > import Common.Utils
 > import Common.Vector
@@ -116,13 +125,16 @@ function, but part of the tiny `Utils` module .
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
 >   let game = breakout mousePosition windowSize
->   driveNetwork game
->                (readInput mousePositionSink closed)
+>   driveNetwork game (readInput mousePositionSink closed)
 > 
 >   -- The inevitable sad ending
 >   closeWindow
 >
->   signalToDot game
+>   -- Providing input for graphviz
+>   args <- getArgs
+>   when ("--dump-dot" `elem` args) $ do
+>     gameGraph <- signalToDot game
+>     putStr gameGraph
 
 The `breakout` function creates a reactive signal that carries the
 rendering actions to be performed at each instant.  The principal

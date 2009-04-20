@@ -1,5 +1,5 @@
 Name:                elerea-examples
-Version:             0.2.0
+Version:             0.3.0
 Cabal-Version:       >= 1.2
 Synopsis:            Example applications for Elerea
 Category:            reactivity, FRP
@@ -15,7 +15,10 @@ Description:
   * chase: a minimal example that demonstrates reactivity and mutually
     recursive signals
   .
-  * breakout: a not too fancy breakout clone
+  * breakout: a not too fancy breakout clone that also demonstrates
+    Graphviz output; you can get an SVG rendition of the signal
+    structure with the following command if Graphviz is installed:
+    @elerea-breakout --dump-dot | dot -Tsvg -o breakout.svg@
 
 Author:              Patai Gergely
 Maintainer:          Patai Gergely (patai@iit.bme.hu)
@@ -38,12 +41,12 @@ Executable elerea-breakout
   Executable:        elerea-breakout
   HS-Source-Dirs:    src
   Main-IS:           Breakout.lhs
-  Build-Depends:     base, elerea, OpenGL, GLFW
+  Build-Depends:     base, elerea >= 0.3, OpenGL, GLFW
   GHC-Options:       -O2
 
 Executable elerea-chase
   Executable:        elerea-chase
   HS-Source-Dirs:    src
   Main-IS:           Chase.lhs
-  Build-Depends:     base, elerea, OpenGL, GLFW
+  Build-Depends:     base, elerea >= 0.2, OpenGL, GLFW
   GHC-Options:       -O2
