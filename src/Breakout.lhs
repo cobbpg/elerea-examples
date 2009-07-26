@@ -31,6 +31,8 @@ following command:
 
 Below follows the full source of the example.
 
+> {-# LANGUAGE RecursiveDo #-}
+>
 > module Main where
 > 
 > import Control.Applicative
@@ -39,12 +41,14 @@ Below follows the full source of the example.
 > import Data.IORef
 > import Data.List
 > import Data.Maybe
+> import Data.Traversable hiding (mapM)
 > import FRP.Elerea
 > import FRP.Elerea.Graph
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
 > import System.Environment
-> 
+> import System.IO.Unsafe
+
 > import Common.Utils
 > import Common.Vector
 
@@ -78,14 +82,16 @@ The dimensions of each brick.
 > brickW = 0.05
 > brickH = 0.03
 
-The starting positions of the bricks.  The third element of the
-triples is the state of the brick.  A brick can either be alive or
-dying.  Dying bricks also keep track of their fadeout level.
+The data structure describing the state of each brick.  A brick can
+either be alive or dying.  Dying bricks also keep track of their
+fadeout level.
 
-> data BrickState = Live | Dying Double deriving Eq
->
+> data BrickState = Live | Dying !Double deriving (Eq,Show)
+
+The starting positions of the bricks.
+
 > brickPos0 = distributeBricks (-0.7) (-0.1) (0.7) (0.4) 18 10
->     where distributeBricks xmin ymin xmax ymax xn yn = [(xmin+xstep*x,ymin+ystep*y,Live) |
+>     where distributeBricks xmin ymin xmax ymax xn yn = [(xmin+xstep*x,ymin+ystep*y) |
 >                                                         x <- [0..xn-1], y <- [0..yn-1]]
 >               where xstep = (xmax-xmin-xn*brickW)/(xn-1)+brickW
 >                     ystep = (ymax-ymin-yn*brickH)/(yn-1)+brickH
@@ -124,7 +130,7 @@ function, but part of the tiny `Utils` module .
 > 
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
->   let game = breakout mousePosition windowSize
+>   game <- createSignal $ breakout mousePosition windowSize
 >   driveNetwork game (readInput mousePositionSink closed)
 > 
 >   -- The inevitable sad ending
@@ -147,46 +153,49 @@ signals forming the game logic are the following:
 * `bricks`: the collection of live and dying bricks along with
    collision information.
 
-The position and velocity of the ball form a circular dependency, as
-velocity is changed whenever a collision is detected, which is a
-function of the position.
+The position and velocity of the ball form a circular dependency
+through the bricks, as velocity is changed whenever a collision is
+detected, which is a function of the position.
 
-The signal carrying the collection of the bricks is obtained by
-applying a stateful transformation (a transfer function) on the ball
-position.  The state contains the bricks still relevant to the game as
-well as collision information.  Although the latter is technically
-redundant, it is still worth including here, since it has to be
-calculated while advancing the state of the bricks, and it is needed
-elsewhere too.
+The signal carrying the collection of the bricks is a higher-order
+signal, where each element of the list is a signal representing an
+individual brick.  Bricks behave independently of each other: they are
+defined as separate transfer functions with the ball position as input
+signal.  As soon as a brick is touched it enters the dying phase and
+fades out.  Also, since other signals are mostly interested in the
+current state of the bricks, we have to define a flattened version,
+which carries the snapshots of all the brick signals.  This is the
+`brickSamples` signal.
 
-> breakout mousePos windowSize = renderLevel <$> playerX <*> ballPos <*> (getBricks <$> bricks)
->     where 
+> breakout mousePos windowSize = mdo
 
 User-driven player position:
 
->           playerX = adjustPlayerPos <$> mousePos <*> windowSize
->           adjustPlayerPos (V x _) (V w _) = min (fieldW-playerW) $ max (-fieldW) $ 2*x/w-1-playerW/2
+>   let playerX = adjustPlayerPos <$> mousePos <*> windowSize
+>       adjustPlayerPos (V x _) (V w _) = min (fieldW-playerW) $ max (-fieldW) $ 2*x/w-1-playerW/2
 
-Ball state: position and velocity.  Note the use of the latcher: we
-wrap a signal created by `adjustVel` in a `pure`, hence adding another
-signal layer around it.
+Ball state: position and velocity.  We use a combination of
+`storeJust` and `toMaybe` to produce a latcher element that stores the
+value of a certain signal whenever a boolean control signal yields
+true.
 
->           ballPos = integralVec (ballPos0) ballVel
->           ballVel = latcher (pure ballVel0)
->                             (ballCollHorz ||@ ballCollVert ||@ ballCollPlayer)
->                             (pure <$> (adjustVel <$> ballCollHorz <*> ballCollVert <*> ballCollPlayer <*>
->                                        ballVel <*> ballNewVelX))
+>   ballPos <- integralVec ballPos0 ballVel
+>   ballVel <- storeJust ballVel0 $
+>              toMaybe <$> (ballCollHorz ||@ ballCollVert ||@ ballCollPlayer) <*>
+>                          (adjustVel <$> ballCollHorz <*> ballCollVert <*> ballCollPlayer <*>
+>                           ballVel <*> ballNewVelX)
 
 The `adjustVel` function calculates a candidate velocity for the next
 frame given collision information and the current velocity.  Even
 though it would return the current speed if there are no collisions,
-we rather not evaluate it at all thanks to the latcher.  In the end,
-velocity is not recalculated in each frame.
+we don't evaluate it at all thanks to the laziness of applicative
+nodes.  In the end, velocity is only recalculated when a collision is
+detected.
 
->           adjustVel ch cv cp (V bvx bvy) bvx' = V x y
->               where x = (if ch then -1 else 1)*(if cp then bvx'*4 else bvx)
->                     y = if cv || cp then -bvy else bvy
->           ballNewVelX = (getX <$> ballPos)-playerX-pure (playerW/2)
+>   let adjustVel ch cv cp (V bvx bvy) bvx' = V x y
+>           where x = (if ch then -1 else 1)*(if cp then bvx'*4 else bvx)
+>                 y = if cv || cp then -bvy else bvy
+>       ballNewVelX = (getX <$> ballPos)-playerX-pure (playerW/2)
 
 Collision events are modelled with bool signals that turn true while
 the ball overlaps the offending surface and approaches it at the same
@@ -194,46 +203,73 @@ time.  Collision response will make sure that the second condition
 does not hold in the next instant, so there is no need to push these
 through an `edge` transfer function.
 
->           ballCollHorz = (getHColl <$> bricks) ||@ (check <$> ballPos <*> ballVel)
->               where check (V bx _) (V bvx _) = (bx < -fieldW && bvx < 0) ||
->                                                (bx > fieldW-ballW && bvx > 0)
->           ballCollVert = (getVColl <$> bricks) ||@ (check <$> ballPos <*> ballVel)
->               where check (V bx by) (V _ bvy) = by > fieldH-ballH && bvy > 0
->           ballCollPlayer = check <$> ballPos <*> ballVel <*> playerX
->               where check (V bx by) (V _ bvy) px = bvy < 0 && doRectsIntersect bx by ballW ballH
->                                                                       px playerY playerW playerH
->
+>       ballCollHorz = (or . map getBrickHColl <$> brickSamples)
+>                      ||@ (check <$> ballPos <*> ballVel)
+>           where check (V bx _) (V bvx _) = (bx < -fieldW && bvx < 0) ||
+>                                            (bx > fieldW-ballW && bvx > 0)
+>       ballCollVert = (or . map getBrickVColl <$> brickSamples)
+>                      ||@ (check <$> ballPos <*> ballVel)
+>           where check (V _ by) (V _ bvy) = by > fieldH-ballH && bvy > 0
+>       ballCollPlayer = check <$> ballPos <*> ballVel <*> playerX
+>           where check (V bx by) (V _ bvy) px = bvy < 0 &&
+>                    doRectsIntersect bx by ballW ballH px playerY playerW playerH
 
-The dynamic list of bricks along with ball-brick collision
-information, all of which are updated in each frame.
+Bricks are defined by the updater function `evolveBrick` as a
+transformer of the ball position.  The transfer function takes care of
+fading and checking collision.  Collision information is part of the
+state of the transfer function, even though it is strictly a function
+of the brick data and the ball position at the moment.  However, since
+we need to check collisions in order to update the state of the brick,
+it's simpler and more efficient to let the outer world see the results
+of these checks instead of having to recalculate them.
 
->           bricks = transfer (False,False,brickPos0) updateBricks ballPos
->           getBricks (_,_,bs) = bs
->           getHColl (c,_,_) = c
->           getVColl (_,c,_) = c
+>   let brick (x,y) = transfer (x,y,Live,False,False) evolveBrick ballPos
+>       getBrickData (x,y,s,_,_) = (x,y,s)
+>       getBrickHColl (_,_,_,c,_) = c
+>       getBrickVColl (_,_,_,_,c) = c
+>       
+>       evolveBrick dt _   (x,y,Dying a,_,_) = (x,y,Dying (a-realToFrac dt*brickFade),False,False)
+>       evolveBrick dt (V bx by) (x,y,_,_,_) = (x,y,if isKilled then Dying 1 else Live,collHorz,collVert)
+>           where isKilled = isHit || by < -fieldH-ballH
+>                 isHit = doRectsIntersect bx by ballW ballH x y brickW brickH
+>                 collHorz = isHit && isHorz
+>                 collVert = isHit && not isHorz
+>                 isHorz = xDist/brickW > yDist/brickH
+>                     where xDist = abs ((x+brickW/2)-(bx+ballW/2))
+>                           yDist = abs ((y+brickH/2)-(by+ballH/2))
 
-Brick updater function: fading and checking collision.  We need to do
-this the traditional way, because Elerea does not provide constructs
-to deal with collections of signals in the reactive layer, unlike
-Yampa.
+The `isBrickNeeded` function is used to decide whether a brick should
+be kept in the collection.  As soon as it turns false, the brick in
+question is removed from the `bricks` signal.
 
->           updateBricks dt (V bx by) (_,_,bricksPrev) = (collHorz,collVert,bricksNext)
->               where bricksNext = catMaybes (map evolveBrick (map killBrick bricksDel++bricksRem))
->                     (bricksDel,bricksNotHit) = partition classifyBrick bricksPrev
->                     bricksRem = if by > -fieldH-ballH then bricksNotHit else map killBrick bricksNotHit
->                     classifyBrick (x,y,s) = s == Live && killed
->                         where killed = doRectsIntersect bx by ballW ballH x y brickW brickH
->                     evolveBrick (x,y,Dying a) = if a < fade then Nothing else Just (x,y,Dying (a-fade))
->                         where fade = realToFrac dt*brickFade
->                     evolveBrick b = Just b
->                     killBrick (x,y,Live) = (x,y,Dying 1)
->                     killBrick b = b
->                     collHorz = or collHBricks
->                     collVert = or (map not collHBricks)
->                     collHBricks = map isHorz bricksDel
->                     isHorz (x,y,_) = xDist/brickW > yDist/brickH
->                         where xDist = abs ((x+brickW/2)-(bx+ballW/2))
->                               yDist = abs ((y+brickH/2)-(by+ballH/2))
+>       isBrickNeeded (_,_,Dying a,_,_) = a > 0
+>       isBrickNeeded (_,_,Live   ,_,_) = True
+
+The `brickSamples` signal contains a snapshot of every brick, and it's
+obtained simply by traversing the collection (this is equivalent to
+rebuilding the structure with lifted constructors), then applying a
+sampler, which collapses the two signal layers into one.  We take
+advantage of the fact that lists are instances of Traversable.
+
+>       brickSamples = sampler (sequenceA <$> bricks)
+
+The `bricks` signal carries the dynamic list of bricks along with
+ball-brick collision information, all of which are updated in each
+frame.  We start out with a number of live bricks in the positions
+given by the `brickPos0` list, and derive the list of the next frame
+from the current one by filtering out the bricks for which
+`isBrickNeeded` evaluates to false.  These updates are made explicit
+by using `delay` to define the dynamic collection.
+
+>   bricks <- do
+>     bricksInit <- mapM brick brickPos0
+>     let bricksNext = map snd . filter (isBrickNeeded . fst) <$> (zip <$> brickSamples <*> bricks)
+>     delay bricksInit bricksNext
+
+And knowing all these signals we can finally assemble the signal of
+rendering actions, i.e. the animation:
+
+>   return $ renderLevel <$> playerX <*> ballPos <*> (map getBrickData <$> brickSamples)
 
 The `doRectsIntersect` function decides whether two rectangles defined
 by their top left corners and dimensions overlap.

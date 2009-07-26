@@ -2,7 +2,7 @@
 
 PANDOC := pandoc --no-wrap -s -S
 HSCOLOUR := HsColour -lit
-UNIOPS := sed "s/>&lt;-</>\&larr;</g" | sed "s/>-&gt;</>\&rarr;</g"
+UNIOPS := sed "s/>&lt;-</>\&larr;</g" | sed "s/>-&gt;</>\&rarr;</g" | sed "s/varid'>mdo/keyword'>mdo/g"
 
 all: ../src/Breakout.html ../src/Chase.html
 

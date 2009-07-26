@@ -9,6 +9,8 @@ with the left mouse button.
 
 For a slightly more complex example check out `Breakout.lhs`.
 
+> {-# LANGUAGE RecursiveDo #-}
+>
 > module Main where
 > 
 > import Control.Applicative
@@ -39,13 +41,18 @@ module.
 >   windowCloseCallback $= writeIORef closed True
 >   initGL 640 480
 > 
->   let ballPos = integralVec vnull ballVel
->       ballVel = latcher (integralVec vnull ballAcc)
->                         (edge mousePress)
->                         (integralVec <$> ballVel^+^ballPos^-^mousePosition <*> pure ballAcc)
->       ballAcc = (mousePosition^-^ballPos)^*.0.3
+>   greyPos <- createSignal $ mdo
+>         mouseClick <- edge mousePress
 >
->   driveNetwork (render <$> windowSize <*> mousePosition <*> ballPos)
+>         let acc = (mousePosition^-^pos)^*.0.3
+>         pos <- integralVec vnull vel
+>         vel0 <- integralVec vnull acc
+>         vel <- sampler <$> (storeJust vel0 . generator mouseClick)
+>                (integralVec <$> vel^+^pos^-^mousePosition <*> pure acc)
+>
+>         return pos
+>
+>   driveNetwork (render <$> windowSize <*> mousePosition <*> greyPos)
 >                (readInput mousePositionSink mousePressSink closed)
 > 
 >   closeWindow

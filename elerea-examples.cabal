@@ -1,5 +1,5 @@
 Name:                elerea-examples
-Version:             0.3.0
+Version:             1.0.0
 Cabal-Version:       >= 1.2
 Synopsis:            Example applications for Elerea
 Category:            reactivity, FRP
@@ -41,12 +41,12 @@ Executable elerea-breakout
   Executable:        elerea-breakout
   HS-Source-Dirs:    src
   Main-IS:           Breakout.lhs
-  Build-Depends:     base, elerea >= 0.3, OpenGL, GLFW
+  Build-Depends:     base, elerea >= 1.0, OpenGL, GLFW
   GHC-Options:       -O2
 
 Executable elerea-chase
   Executable:        elerea-chase
   HS-Source-Dirs:    src
   Main-IS:           Chase.lhs
-  Build-Depends:     base, elerea >= 0.2, OpenGL, GLFW
+  Build-Depends:     base, elerea >= 1.0, OpenGL, GLFW
   GHC-Options:       -O2
