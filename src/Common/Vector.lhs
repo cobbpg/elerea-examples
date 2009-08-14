@@ -3,7 +3,8 @@ Vector module
 
 This module contains a class for two-dimensional vectors, a strict
 datatype to instantiate it, and another instance for signals of the
-same type.
+same type.  We use CFloat as the coordinate type, because GLfloat is
+its synonym.
 
 > {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 >
@@ -11,8 +12,9 @@ same type.
 >
 > import Control.Applicative
 > import FRP.Elerea
+> import Foreign.C.Types
 >
-> data Vec = V { getX :: !Float, getY :: !Float }
+> data Vec = V { getX :: !CFloat, getY :: !CFloat }
 >
 > infixl 7 ^*.
 > infixl 7 .*^
@@ -30,7 +32,7 @@ same type.
 >     dot :: v -> v -> c
 >     cross :: v -> v -> c
 >
-> instance Vector2D Vec Float where
+> instance Vector2D Vec CFloat where
 >     V x1 y1 ^+^ V x2 y2 = V (x1+x2) (y1+y2)
 >     V x1 y1 ^-^ V x2 y2 = V (x1-x2) (y1-y2)
 >     V x y ^*. t = V (x*t) (y*t)
@@ -39,7 +41,7 @@ same type.
 >     V x1 y1 `dot` V x2 y2 = x1*y1+x2*y2
 >     V x1 y1 `cross` V x2 y2 = x1*y2-x2*y1
 >
-> instance Vector2D (Signal Vec) (Signal Float) where
+> instance Vector2D (Signal Vec) (Signal CFloat) where
 >     (^+^) = liftA2 (^+^)
 >     (^-^) = liftA2 (^-^)
 >     (^*.) = liftA2 (^*.)

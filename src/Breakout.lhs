@@ -86,7 +86,7 @@ The data structure describing the state of each brick.  A brick can
 either be alive or dying.  Dying bricks also keep track of their
 fadeout level.
 
-> data BrickState = Live | Dying !Double deriving (Eq,Show)
+> data BrickState = Live | Dying !GLfloat deriving (Eq,Show)
 
 The starting positions of the bricks.
 
