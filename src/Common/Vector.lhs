@@ -3,18 +3,17 @@ Vector module
 
 This module contains a class for two-dimensional vectors, a strict
 datatype to instantiate it, and another instance for signals of the
-same type.  We use CFloat as the coordinate type, because GLfloat is
-its synonym.
+same type.
 
-> {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
+> {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, TypeSynonymInstances #-}
 >
 > module Common.Vector where
 >
 > import Control.Applicative
 > import FRP.Elerea
-> import Foreign.C.Types
+> import Graphics.Rendering.OpenGL
 >
-> data Vec = V { getX :: !CFloat, getY :: !CFloat }
+> data Vec = V { getX :: !GLfloat, getY :: !GLfloat }
 >
 > infixl 7 ^*.
 > infixl 7 .*^
@@ -32,7 +31,7 @@ its synonym.
 >     dot :: v -> v -> c
 >     cross :: v -> v -> c
 >
-> instance Vector2D Vec CFloat where
+> instance Vector2D Vec GLfloat where
 >     V x1 y1 ^+^ V x2 y2 = V (x1+x2) (y1+y2)
 >     V x1 y1 ^-^ V x2 y2 = V (x1-x2) (y1-y2)
 >     V x y ^*. t = V (x*t) (y*t)
@@ -41,7 +40,7 @@ its synonym.
 >     V x1 y1 `dot` V x2 y2 = x1*y1+x2*y2
 >     V x1 y1 `cross` V x2 y2 = x1*y2-x2*y1
 >
-> instance Vector2D (Signal Vec) (Signal CFloat) where
+> instance Vector2D (Signal Vec) (Signal GLfloat) where
 >     (^+^) = liftA2 (^+^)
 >     (^-^) = liftA2 (^-^)
 >     (^*.) = liftA2 (^*.)
