@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, NoMonomorphismRestriction #-}
+{-# LANGUAGE RecursiveDo, NoMonomorphismRestriction #-}
 
 module Main where
 
@@ -11,51 +11,10 @@ import FRP.Elerea.Experimental
 import Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL
 
-infixl 7 ^*.
-infixl 7 .*^
-infixl 7 ^/.
-infixl 7 `dot`
-infixl 7 `cross`
-infixl 6 ^+^
-infixl 6 ^-^
-
-data Vec = V { getX :: {-# UNPACK #-} !GLfloat, getY :: {-# UNPACK #-} !GLfloat }
-
-class Vector2D v c | v -> c where
-  (^+^) :: v -> v -> v
-  (^-^) :: v -> v -> v
-  (^*.) :: v -> c -> v
-  (.*^) :: c -> v -> v
-  (^/.) :: v -> c -> v
-  vnull :: v
-  dot :: v -> v -> c
-  cross :: v -> v -> c
-  vlen :: v -> c
-  mul :: v -> v -> v
-
-instance Vector2D Vec GLfloat where
-  V x1 y1 ^+^ V x2 y2 = V (x1+x2) (y1+y2)
-  V x1 y1 ^-^ V x2 y2 = V (x1-x2) (y1-y2)
-  V x y ^*. t = V (x*t) (y*t)
-  t .*^ V x y = V (x*t) (y*t)
-  V x y ^/. t = V (x/t) (y/t)
-  vnull = V 0 0
-  V x1 y1 `dot` V x2 y2 = x1*x2+y1*y2
-  V x1 y1 `cross` V x2 y2 = x1*y2-x2*y1
-  vlen (V x y) = sqrt (x*x+y*y)
-  V x1 y1 `mul` V x2 y2 = V (x1*x2) (y1*y2)
-
-instance Vector2D (Signal p Vec) (Signal p GLfloat) where
-  (^+^) = liftA2 (^+^)
-  (^-^) = liftA2 (^-^)
-  (^*.) = liftA2 (^*.)
-  (.*^) = liftA2 (.*^)
-  (^/.) = liftA2 (^/.)
-  vnull = pure vnull
-  dot = liftA2 dot
-  cross = liftA2 cross
-  vlen = fmap vlen
-  mul = liftA2 mul
+import Event
+import Math
+import Util
+import Vector
 
 frameThickness = 0.05
 
@@ -81,10 +40,10 @@ balls mousePos mousePress = mdo
 
   return $ render <$> ballData
 
-ball initPos mousePos mouseDown = mdo
-  mouseClick <- edge mouseDown
-  let dragBegin = mouseClick &&@ (vlen (pos^-^mousePos) <@ ballSize/2)
-  dragEnd <- edge (not <$> mouseDown)
+ball initPos mousePos mousePress = mdo
+  mouseDown <- edge mousePress
+  let dragBegin = mouseDown &&@ (vlen (pos^-^mousePos) <@ ballSize/2)
+  dragEnd <- edge (not <$> mousePress)
   drag <- False --> leftE (ifE dragBegin (pure True)) (ifE dragEnd (pure False))
   dragVel <- derivTV 0.05 mousePos
   
@@ -106,76 +65,6 @@ ballColour hit = transfer Nothing update hit
         update dt False prev = do t <- prev
                                   guard (t > 0)
                                   return (t-dt*ballFade)
-
--- Some generally useful combinators
-
-integral v0 s = transfer v0 (\dt v v0 -> v0+v*dt) s
-
-integralV v0 s = transfer v0 (\dt v v0 -> v0^+^(v^*.dt)) s
-
-deriv s = do
-  sig <- transfer (0,0,1) (\dt v (v0,_,_) -> (v,v0,dt)) s
-  initSignal 0 (d <$> sig)
-  where d (x',x,dt) = (x'-x)/dt
-
-derivV s = do
-  sig <- transfer (vnull,vnull,1) (\dt v (v0,_,_) -> (v,v0,dt)) s
-  initSignal vnull (d <$> sig)
-  where d (x',x,dt) = (x'^-^x)^/.dt
-
-derivT wt s = do
-  sig <- transfer (0,(0,0)) d s
-  return (fst <$> sig)
-  where d dt v (x,(v0,t)) = if t' > wt then ((v-v0)/t',(v,0)) else (x,(v0,t'))
-          where t' = dt+t
-
-derivTV wt s = do
-  sig <- transfer (vnull,(vnull,0)) d s
-  return (fst <$> sig)
-  where d dt v (x,(v0,t)) = if t' > wt then ((v^-^v0)^/.t',(v,0)) else (x,(v0,t'))
-          where t' = dt+t
-
-movingAvg n s = do
-  sig <- scanM n (delay 0) s
-  return $ ((/n).sum) <$> sequence sig
-
-movingAvgV n s = do
-  sig <- scanM n (delay vnull) s
-  return $ ((^/.n).foldl1' (^+^)) <$> sequence sig
-
-scanM 0 _ _ = return []
-scanM n f m = do
-  x <- f m
-  xs <- scanM (n-1) f x
-  return (x:xs)
-
--- Thanks to the signal monad instance these can be more efficient
--- than the purely applicative versions!
-
-ifS c s1 s2 = c >>= \b -> if b then s1 else s2
-
-ifE c s = c >>= \b -> if b then Just <$> s else return Nothing
-
-leftE e1 e2 = e1 >>= \mx -> case mx of
-  Nothing -> e2
-  jx      -> return jx
-
-rightE e1 e2 = e2 >>= \mx -> case mx of
-  Nothing -> e1
-  jx      -> return jx
-
-mergeE []     = return Nothing
-mergeE (e:es) = e >>= \mx -> case mx of
-  Nothing -> mergeE es
-  jx      -> return jx
-
-collectE e = mdo
-  sig <- delay [] (((++).maybeToList) <$> e <*> sig)
-  return sig
-
-initSignal x s = do
-  c <- stateful True (const (const False))
-  return $ ifS c (pure x) s
 
 -- OpenGL bits and general plumbing
 
