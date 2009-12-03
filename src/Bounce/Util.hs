@@ -14,3 +14,6 @@ scanM n f m = do
   x <- f m
   xs <- scanM (n-1) f x
   return (x:xs)
+
+-- Optional delay. Should memo behave like this?
+dmemo = flip transfer (const const)

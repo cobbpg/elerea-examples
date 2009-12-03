@@ -27,10 +27,16 @@ data Ball = Ball { ballPos :: Vec
                  , ballDrag :: Bool
                  }
 
-balls mousePos mousePress = mdo
+bounceDemo mousePos mousePress = mdo
   leftPress <- memo $ fst <$> mousePress
+  rightPress <- memo $ snd <$> mousePress
 
-  ballList <- collectE newBallE
+  (killDrag,killNow) <- dragRectangle mousePos rightPress
+  killRect <- (vnull,vnull) --> killDrag
+  let within (V tlx tly,V brx bry) (V x y) = x > min tlx brx && x < max tlx brx &&
+                                             y > min tly bry && y < max tly bry
+
+  ballList <- collectE newBallE $ \bs -> killNow &&@ (within <$> killRect <*> (ballPos <$> bs))
   ballData <- memo $ sequence =<< ballList
   newBallCond <- edge $ leftPress &&@ (all (not.ballDrag) <$> ballData)
   newBallE <- generator $ newBall <$> mousePos <*> newBallCond
@@ -38,13 +44,22 @@ balls mousePos mousePress = mdo
                          then Just <$> ball pos mousePos leftPress
                          else return Nothing
 
-  return $ render <$> ballData
+  return $ render <$> ballData <*> killDrag
+
+flipflop te fe = False --> leftE (ifE te (pure True)) (ifE fe (pure False))
+
+dragRectangle mousePos mousePress = do
+  dragBegin <- edge mousePress
+  dragEnd <- edge (not <$> mousePress)
+  drag <- flipflop dragBegin dragEnd
+  topLeft <- vnull --> ifE dragBegin mousePos
+  return (ifE drag ((,) <$> topLeft <*> mousePos), dragEnd)
 
 ball initPos mousePos mousePress = mdo
   mouseDown <- edge mousePress
   let dragBegin = mouseDown &&@ (vlen (pos^-^mousePos) <@ ballSize/2)
   dragEnd <- edge (not <$> mousePress)
-  drag <- False --> leftE (ifE dragBegin (pure True)) (ifE dragEnd (pure False))
+  drag <- flipflop dragBegin dragEnd
   dragVel <- derivTV 0.05 mousePos
   
   let collHorz (V vx _) (V px _) = collFrame vx px
@@ -66,8 +81,6 @@ ballColour hit = transfer Nothing update hit
                                   guard (t > 0)
                                   return (t-dt*ballFade)
 
--- OpenGL bits and general plumbing
-
 driveNetwork network driver = do
   dt <- driver
   case dt of
@@ -88,7 +101,7 @@ main = do
   windowCloseCallback $= writeIORef closed True
   initGL 640 480
 
-  demo <- start $ balls mousePosition mousePress
+  demo <- start $ bounceDemo mousePosition mousePress
   time $= 0
   driveNetwork demo (readInput mousePositionSink mousePressSink closed)
 
@@ -112,7 +125,7 @@ resizeGLScene size@(Size w h) = do
 	
   matrixMode $= Modelview 0
 
-render bs = do
+render bs rect = do
   let drawRectangle x y sx sy = do
         renderPrimitive Quads $ do
           vertex $ Vertex3 (x)    (y)    (0 :: GLfloat)
@@ -127,11 +140,13 @@ render bs = do
 
   clear [ColorBuffer]
   loadIdentity
+  
   color $ Color4 0.7 0.7 0.7 (1 :: GLfloat)
   drawRectangle 0 0 1 frameThickness
   drawRectangle 0 (1-frameThickness) 1 frameThickness
   drawRectangle 0 0 frameThickness 1
   drawRectangle (1-frameThickness) 0 frameThickness 1
+  
   forM_ bs $ \b -> do
     case ballCol b of
       Nothing -> color $ Color4 0 0 0.7 (1 :: GLfloat)
@@ -139,6 +154,12 @@ render bs = do
 
     let V x y = ballPos b
     drawEllipse x y ballSize ballSize 20
+
+  case rect of
+    Nothing -> return ()
+    Just (V tlx tly,V brx bry) -> do
+      color $ Color4 1 0 0 (0.4 :: GLfloat)
+      drawRectangle tlx tly (brx-tlx) (bry-tly)
 
   flush
   swapBuffers
