@@ -27,6 +27,11 @@ data Ball = Ball { ballPos :: Vec
                  , ballDrag :: Bool
                  }
 
+-- A box with bouncing balls inside:  
+-- * left click creates a new ball,
+-- * existing balls can be dragged and propelled with the left button,
+-- * dragging with the right button creates a rectangle; every ball
+--   within the rectangle is deleted when the button is released.
 bounceDemo renderFun mousePos mousePress = mdo
   leftPress <- memo $ fst <$> mousePress
   rightPress <- memo $ snd <$> mousePress
@@ -50,8 +55,13 @@ bounceDemo renderFun mousePos mousePress = mdo
   
   return $ renderFun <$> ballData <*> killDrag <*> fps
 
+-- Flipflop signal: turns true when the first event fires, turns false
+-- when the second fires.
 flipflop te fe = False --> leftE (ifE te (pure True)) (ifE fe (pure False))
 
+-- A rectangle created by dragging. When active, the coordinates of
+-- its opposing corners are wrapped in a Just, otherwise the data is
+-- Nothing. Also returns the event ending the drag.
 dragRectangle mousePos mousePress = do
   dragBegin <- edge mousePress
   dragEnd <- edge (not <$> mousePress)
@@ -59,6 +69,8 @@ dragRectangle mousePos mousePress = do
   topLeft <- vnull --> ifE dragBegin mousePos
   return (ifE drag ((,) <$> topLeft <*> mousePos), dragEnd)
 
+-- A ball that bounces within the box and can be dragged. It flashes
+-- every time its velocity changes.
 ball initPos mousePos mousePress = mdo
   mouseDown <- edge mousePress
   let dragBegin = mouseDown &&@ (vlen (pos^-^mousePos) <@ ballSize/2)
@@ -79,6 +91,8 @@ ball initPos mousePos mousePress = mdo
 
   return $ Ball <$> pos <*> colour <*> drag
 
+-- A signal describing the colour of a ball. Nothing means normal
+-- state, Just denotes flashing.
 ballColour hit = transfer Nothing update hit
   where update dt True  _    = Just 1
         update dt False prev = do t <- prev

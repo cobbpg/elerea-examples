@@ -1,5 +1,5 @@
 Name:                elerea-examples
-Version:             1.1.0
+Version:             1.2.0
 Cabal-Version:       >= 1.2
 Synopsis:            Example applications for Elerea
 Category:            reactivity, FRP
@@ -21,6 +21,9 @@ Description:
     @elerea-breakout --dump-dot | dot -Tsvg -o breakout.svg@
   .
   * bounce: an example for creating dynamic collections of signals
+    with the experimental interface; left click to create balls, drag
+    existing balls with left button to propel them and drag with right
+    to select balls for deletion (upon release)
 
 Author:              Patai Gergely
 Maintainer:          Patai Gergely (patai@iit.bme.hu)
@@ -33,17 +36,24 @@ Extra-Source-Files:
   src/Common/Vector.lhs
   src/Common/Utils.lhs
 
+  src/Bounce/Event.hs
+  src/Bounce/Math.hs
+  src/Bounce/Util.hs
+  src/Bounce/Vector.hs
+
   doc/Breakout.html
   doc/Breakout.png
   doc/Chase.html
   doc/hscolour.css
   doc/Makefile
 
+  README
+
 Executable elerea-bounce
   Executable:        elerea-bounce
-  HS-Source-Dirs:    src
-  Main-IS:           Bounce.hs
-  Build-Depends:     base >= 3 && < 5, elerea >= 1.1, OpenGL, GLFW >= 0.4
+  HS-Source-Dirs:    src/Bounce
+  Main-IS:           Main.hs
+  Build-Depends:     base >= 3 && < 5, elerea >= 1.2, OpenGL, GLFW >= 0.4
   GHC-Options:       -O2
 
 Executable elerea-breakout
