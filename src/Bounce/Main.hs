@@ -27,7 +27,7 @@ data Ball = Ball { ballPos :: Vec
                  , ballDrag :: Bool
                  }
 
-bounceDemo mousePos mousePress = mdo
+bounceDemo renderFun mousePos mousePress = mdo
   leftPress <- memo $ fst <$> mousePress
   rightPress <- memo $ snd <$> mousePress
 
@@ -38,13 +38,17 @@ bounceDemo mousePos mousePress = mdo
 
   ballList <- collectE newBallE $ \bs -> killNow &&@ (within <$> killRect <*> (ballPos <$> bs))
   ballData <- memo $ sequence =<< ballList
+  -- Change edge to memo below to be able to add lots of balls with ease!
   newBallCond <- edge $ leftPress &&@ (all (not.ballDrag) <$> ballData)
   newBallE <- generator $ newBall <$> mousePos <*> newBallCond
   let newBall pos cond = if cond
                          then Just <$> ball pos mousePos leftPress
                          else return Nothing
 
-  return $ render <$> ballData <*> killDrag
+  frameCount <- stateful 0 (const (+1))
+  fps <- derivT 2 frameCount
+  
+  return $ renderFun <$> ballData <*> killDrag <*> fps
 
 flipflop te fe = False --> leftE (ifE te (pure True)) (ifE fe (pure False))
 
@@ -99,9 +103,14 @@ main = do
   closed <- newIORef False
   windowSizeCallback $= resizeGLScene
   windowCloseCallback $= writeIORef closed True
-  initGL 640 480
+  initGL 800 800
 
-  demo <- start $ bounceDemo mousePosition mousePress
+  unitCircle <- defineNewList Compile $ renderPrimitive TriangleStrip $ forM_ [0..20] $ \i -> do
+    let a = 2*pi*i/20
+    vertex $ Vertex3 (0.5*sin a) (0.5*cos a) (0 :: GLfloat)
+    vertex $ Vertex3 0 0 (0 :: GLfloat)
+
+  demo <- start $ bounceDemo (render unitCircle) mousePosition mousePress
   time $= 0
   driveNetwork demo (readInput mousePositionSink mousePressSink closed)
 
@@ -125,23 +134,22 @@ resizeGLScene size@(Size w h) = do
 	
   matrixMode $= Modelview 0
 
-render bs rect = do
+render unitCircle bs rect fps = do
   let drawRectangle x y sx sy = do
         renderPrimitive Quads $ do
           vertex $ Vertex3 (x)    (y)    (0 :: GLfloat)
           vertex $ Vertex3 (x+sx) (y)    (0 :: GLfloat)
           vertex $ Vertex3 (x+sx) (y+sy) (0 :: GLfloat)
           vertex $ Vertex3 (x)    (y+sy) (0 :: GLfloat)
-      drawEllipse xc yc xs ys n = do
-        renderPrimitive TriangleStrip $ forM_ [0..n] $ \i -> do
-          let a = 2*pi*fromIntegral i/fromIntegral n
-          vertex $ Vertex3 (xc+xs/2*sin a) (yc+ys/2*cos a) (0 :: GLfloat)
-          vertex $ Vertex3 xc yc (0 :: GLfloat)
+      drawEllipse xc yc xs ys n = preservingMatrix $ do
+        translate $ Vector3 xc yc (0 :: GLfloat)
+        scale xs ys (1 :: GLfloat)
+        callList unitCircle
 
   clear [ColorBuffer]
   loadIdentity
   
-  color $ Color4 0.7 0.7 0.7 (1 :: GLfloat)
+  color $ Color4 0.6 0.6 0.6 (1 :: GLfloat)
   drawRectangle 0 0 1 frameThickness
   drawRectangle 0 (1-frameThickness) 1 frameThickness
   drawRectangle 0 0 frameThickness 1
@@ -160,6 +168,10 @@ render bs rect = do
     Just (V tlx tly,V brx bry) -> do
       color $ Color4 1 0 0 (0.4 :: GLfloat)
       drawRectangle tlx tly (brx-tlx) (bry-tly)
+
+  scale 0.003 0.003 (1 :: GLfloat)
+  color $ Color4 1 1 1 (1 :: GLfloat)
+  renderString Fixed8x16 $ " FPS: " ++ show fps ++ " balls: " ++ show (length bs)
 
   flush
   swapBuffers
