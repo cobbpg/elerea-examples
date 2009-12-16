@@ -12,13 +12,13 @@ For a slightly more complex example check out `Breakout.lhs`.
 > {-# LANGUAGE RecursiveDo #-}
 >
 > module Main where
-> 
+>
 > import Control.Applicative
 > import Data.IORef
 > import FRP.Elerea
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
-> 
+>
 > import Common.Utils
 > import Common.Vector
 
@@ -31,16 +31,16 @@ module.
 >   initialize
 >   openWindow (Size 640 480) [DisplayRGBBits 8 8 8, DisplayAlphaBits 8, DisplayDepthBits 24] Window
 >   windowTitle $= "Elerea Chase"
-> 
+>
 >   (windowSize,windowSizeSink) <- external vnull
 >   (mousePosition,mousePositionSink) <- external vnull
 >   (mousePress,mousePressSink) <- external False
-> 
+>
 >   closed <- newIORef False
 >   windowSizeCallback $= resizeGLScene windowSizeSink
 >   windowCloseCallback $= writeIORef closed True
 >   initGL 640 480
-> 
+>
 >   greyPos <- createSignal $ mdo
 >         mouseClick <- edge mousePress
 >
@@ -54,7 +54,7 @@ module.
 >
 >   driveNetwork (render <$> windowSize <*> mousePosition <*> greyPos)
 >                (readInput mousePositionSink mousePressSink closed)
-> 
+>
 >   closeWindow
 
 The `render` function takes a snapshot of the system (window size and
@@ -71,14 +71,14 @@ version of the IO action returned here.
 >           vertex $ Vertex3 ( s) (-s) (0 :: GLfloat)
 >           vertex $ Vertex3 ( s) ( s) (0 :: GLfloat)
 >           vertex $ Vertex3 (-s) ( s) (0 :: GLfloat)
-> 
+>
 >   clear [ColorBuffer]
->  
+>
 >   color $ Color4 1 0 0 (0.5 :: GLfloat)
 >   drawSquare cx cy 0.05
 >   color $ Color4 1 1 1 (0.6 :: GLfloat)
 >   drawSquare ox oy 0.03
-> 
+>
 >   flush
 >   swapBuffers
 
@@ -110,11 +110,11 @@ projection matrix.
 
 > resizeGLScene winSize size@(Size w h) = do
 >   winSize (V (fromIntegral w) (fromIntegral h))
-> 
+>
 >   viewport $= (Position 0 0,size)
-> 
+>
 >   matrixMode $= Projection
 >   loadIdentity
 >   scale 1 (fromIntegral w/fromIntegral h) (1 :: GLfloat)
-> 	
+>
 >   matrixMode $= Modelview 0

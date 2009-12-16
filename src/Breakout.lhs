@@ -34,7 +34,7 @@ Below follows the full source of the example.
 > {-# LANGUAGE RecursiveDo #-}
 >
 > module Main where
-> 
+>
 > import Control.Applicative
 > import Control.Concurrent
 > import Control.Monad
@@ -117,22 +117,22 @@ function, but part of the tiny `Utils` module .
 >   initialize
 >   openWindow (Size 640 480) [DisplayRGBBits 8 8 8, DisplayAlphaBits 8] Window
 >   windowTitle $= "Elerea Breakout"
-> 
+>
 >   -- External signals available for the game logic
 >   (windowSize,windowSizeSink) <- external vnull
 >   (mousePosition,mousePositionSink) <- external vnull
-> 
+>
 >   -- Wrapping up the init phase
 >   closed <- newIORef False
 >   windowSizeCallback $= resizeGLScene windowSizeSink
 >   windowCloseCallback $= writeIORef closed True
 >   initGL 640 480
-> 
+>
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
 >   game <- createSignal $ breakout mousePosition windowSize
 >   driveNetwork game (readInput mousePositionSink closed)
-> 
+>
 >   -- The inevitable sad ending
 >   closeWindow
 >
@@ -227,7 +227,7 @@ of these checks instead of having to recalculate them.
 >       getBrickData (x,y,s,_,_) = (x,y,s)
 >       getBrickHColl (_,_,_,c,_) = c
 >       getBrickVColl (_,_,_,_,c) = c
->       
+>
 >       evolveBrick dt _   (x,y,Dying a,_,_) = (x,y,Dying (a-realToFrac dt*brickFade),False,False)
 >       evolveBrick dt (V bx by) (x,y,_,_,_) = (x,y,if isKilled then Dying 1 else Live,collHorz,collVert)
 >           where isKilled = isHit || by < -fieldH-ballH
@@ -297,7 +297,7 @@ into an IO action that displays this snapshot on the screen.  The
 >           let a = 2*pi*fromIntegral i/fromIntegral n
 >           vertex $ Vertex3 (xc+xs/2*sin a) (yc+ys/2*cos a) (0 :: GLfloat)
 >           vertex $ Vertex3 xc yc (0 :: GLfloat)
-> 
+>
 >   clear [ColorBuffer]
 >
 >   color $ Color4 0.2 0.2 0.2 (1 :: GLfloat)
@@ -311,7 +311,7 @@ into an IO action that displays this snapshot on the screen.  The
 >
 >   color $ Color4 1 1 1 (0.6 :: GLfloat)
 >   drawEllipse ballX ballY ballW ballH 20
-> 
+>
 >   color $ Color4 0.3 0.4 0.8 (0.5 :: GLfloat)
 >   drawRect playerX playerY playerW playerH
 >
@@ -358,11 +358,11 @@ besides adjusting the projection matrix.
 
 > resizeGLScene winSize size@(Size w h) = do
 >   winSize (V (fromIntegral w) (fromIntegral h))
-> 
+>
 >   viewport $= (Position 0 0,size)
-> 
+>
 >   matrixMode $= Projection
 >   loadIdentity
 >   scale 1 (fromIntegral w/fromIntegral h) (1 :: GLfloat)
-> 	
+>
 >   matrixMode $= Modelview 0

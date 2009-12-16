@@ -27,7 +27,7 @@ data Ball = Ball { ballPos :: Vec
                  , ballDrag :: Bool
                  }
 
--- A box with bouncing balls inside:  
+-- A box with bouncing balls inside:
 -- * left click creates a new ball,
 -- * existing balls can be dragged and propelled with the left button,
 -- * dragging with the right button creates a rectangle; every ball
@@ -52,7 +52,7 @@ bounceDemo renderFun mousePos mousePress = mdo
 
   frameCount <- stateful 0 (const (+1))
   fps <- derivT 2 frameCount
-  
+
   return $ renderFun <$> ballData <*> killDrag <*> fps
 
 -- Flipflop signal: turns true when the first event fires, turns false
@@ -77,7 +77,7 @@ ball initPos mousePos mousePress = mdo
   dragEnd <- edge (not <$> mousePress)
   drag <- flipflop dragBegin dragEnd
   dragVel <- derivTV 0.05 mousePos
-  
+
   let collHorz (V vx _) (V px _) = collFrame vx px
       collVert (V _ vy) (V _ py) = collFrame vy py
       collFrame v p = abs (p-0.5) > 0.5-(frameThickness+ballSize/2) && (p-0.5)*v > 0
@@ -145,7 +145,7 @@ resizeGLScene size@(Size w h) = do
   loadIdentity
   scale (min 2 r') (min 2 r) (1 :: GLfloat)
   translate $ Vector3 (-0.5) (-0.5) (0 :: GLfloat)
-	
+
   matrixMode $= Modelview 0
 
 render unitCircle bs rect fps = do
@@ -162,13 +162,13 @@ render unitCircle bs rect fps = do
 
   clear [ColorBuffer]
   loadIdentity
-  
+
   color $ Color4 0.6 0.6 0.6 (1 :: GLfloat)
   drawRectangle 0 0 1 frameThickness
   drawRectangle 0 (1-frameThickness) 1 frameThickness
   drawRectangle 0 0 frameThickness 1
   drawRectangle (1-frameThickness) 0 frameThickness 1
-  
+
   forM_ bs $ \b -> do
     case ballCol b of
       Nothing -> color $ Color4 0 0 0.7 (1 :: GLfloat)
@@ -193,7 +193,7 @@ render unitCircle bs rect fps = do
 readInput mousePos mouseBut closed = do
   t <- get time
   time $= 0
-  
+
   Position x y <- get GLFW.mousePos
   Size w h <- get windowSize
   let x' = fromIntegral x
@@ -203,7 +203,7 @@ readInput mousePos mouseBut closed = do
       mx = (x'-max 0 (w'-h')/2)/min w' h'
       my = (y'-max 0 (h'-w')/2)/min w' h'
   mousePos (V mx (1-my))
-  
+
   bl <- getMouseButton ButtonLeft
   br <- getMouseButton ButtonRight
   mouseBut (bl == Press, br == Press)
