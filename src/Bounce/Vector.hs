@@ -3,7 +3,7 @@
 module Vector where
 
 import Control.Applicative
-import FRP.Elerea.Experimental
+import FRP.Elerea.Delayed
 import Graphics.Rendering.OpenGL
 
 data Vec = V { getX :: {-# UNPACK #-} !GLfloat, getY :: {-# UNPACK #-} !GLfloat }

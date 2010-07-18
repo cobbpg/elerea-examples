@@ -7,7 +7,7 @@ This module contains some functions that might make it into the core library eve
 >
 > import Control.Applicative
 > import Control.Monad
-> import FRP.Elerea
+> import FRP.Elerea.Legacy
 >
 > import Common.Vector
 

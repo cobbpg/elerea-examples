@@ -1,5 +1,5 @@
 Name:                elerea-examples
-Version:             1.2.0
+Version:             2.0.0
 Cabal-Version:       >= 1.2
 Synopsis:            Example applications for Elerea
 Category:            reactivity, FRP
@@ -12,18 +12,19 @@ Description:
   .
   The programs included are the following:
   .
-  * chase: a minimal example that demonstrates reactivity and mutually
-    recursive signals
+  * bounce (current): an example for creating dynamic collections of
+    signals with the experimental interface; left click to create
+    balls, drag existing balls with left button to propel them and
+    drag with right to select balls for deletion (upon release)
   .
-  * breakout: a not too fancy breakout clone that also demonstrates
-    Graphviz output; you can get an SVG rendition of the signal
-    structure with the following command if Graphviz is installed:
-    @elerea-breakout --dump-dot | dot -Tsvg -o breakout.svg@
+  * chase (legacy): a minimal example that demonstrates reactivity and
+    mutually recursive signals
   .
-  * bounce: an example for creating dynamic collections of signals
-    with the experimental interface; left click to create balls, drag
-    existing balls with left button to propel them and drag with right
-    to select balls for deletion (upon release)
+  * breakout (legacy): a not too fancy breakout clone that also
+    demonstrates Graphviz output; you can get an SVG rendition of the
+    signal structure with the following command if Graphviz is
+    installed: @elerea-breakout --dump-dot | dot -Tsvg -o
+    breakout.svg@
 
 Author:              Patai Gergely
 Maintainer:          Patai Gergely (patai@iit.bme.hu)
@@ -54,18 +55,18 @@ Executable elerea-bounce
   HS-Source-Dirs:    src/Bounce
   Main-IS:           Main.hs
   Build-Depends:     base >= 3 && < 5, elerea >= 1.2, OpenGL, GLFW >= 0.4
-  GHC-Options:       -O2
+  GHC-Options:       -O2 -fno-warn-deprecated-flags
 
 Executable elerea-breakout
   Executable:        elerea-breakout
   HS-Source-Dirs:    src
   Main-IS:           Breakout.lhs
   Build-Depends:     base >= 3 && < 5, elerea >= 1.0, OpenGL, GLFW >= 0.4
-  GHC-Options:       -O2
+  GHC-Options:       -O2 -fno-warn-deprecated-flags
 
 Executable elerea-chase
   Executable:        elerea-chase
   HS-Source-Dirs:    src
   Main-IS:           Chase.lhs
   Build-Depends:     base >= 3 && < 5, elerea >= 1.0, OpenGL, GLFW >= 0.4
-  GHC-Options:       -O2
+  GHC-Options:       -O2 -fno-warn-deprecated-flags

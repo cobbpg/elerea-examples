@@ -42,8 +42,8 @@ Below follows the full source of the example.
 > import Data.List
 > import Data.Maybe
 > import Data.Traversable hiding (mapM)
-> import FRP.Elerea
-> import FRP.Elerea.Graph
+> import FRP.Elerea.Legacy
+> import FRP.Elerea.Legacy.Graph
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
 > import System.Environment

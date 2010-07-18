@@ -15,7 +15,7 @@ For a slightly more complex example check out `Breakout.lhs`.
 >
 > import Control.Applicative
 > import Data.IORef
-> import FRP.Elerea
+> import FRP.Elerea.Legacy
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
 >

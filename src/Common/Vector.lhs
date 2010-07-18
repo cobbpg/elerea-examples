@@ -10,7 +10,7 @@ same type.
 > module Common.Vector where
 >
 > import Control.Applicative
-> import FRP.Elerea
+> import FRP.Elerea.Legacy
 > import Graphics.Rendering.OpenGL
 >
 > data Vec = V { getX :: !GLfloat, getY :: !GLfloat }

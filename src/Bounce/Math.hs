@@ -4,7 +4,7 @@ module Math where
 
 import Control.Applicative
 import Data.List
-import FRP.Elerea.Experimental
+import FRP.Elerea.Delayed
 
 import Vector
 import Util
