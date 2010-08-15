@@ -1,7 +1,6 @@
-Example applications for Elerea. They are factored out into their
-own package so as to avoid unnecessary dependencies in the
-library. Check out the @doc@ directory for the colourful literate
-sources.
+Example applications for Elerea. They are factored out into their own
+package so as to avoid unnecessary dependencies in the library. Check
+out the doc directory for the colourful literate sources.
 
 The programs included are the following:
 
