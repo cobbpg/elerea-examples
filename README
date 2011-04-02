@@ -5,7 +5,7 @@ sources.
 
 The programs included are the following:
 
-* bounce (current): an example for creating dynamic collections of
+* bounce (legacy): an example for creating dynamic collections of
   signals with the experimental interface; left click to create
   balls, drag existing balls with left button to propel them and
   drag with right to select balls for deletion (upon release)

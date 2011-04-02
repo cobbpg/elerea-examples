@@ -1,7 +1,7 @@
 module Util where
 
 import Control.Applicative
-import FRP.Elerea.Delayed
+import FRP.Elerea.Legacy.Delayed
 
 -- Lifted conditional.
 ifS c s1 s2 = c >>= \b -> if b then s1 else s2

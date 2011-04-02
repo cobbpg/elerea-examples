@@ -7,7 +7,7 @@ import Control.Monad
 import Data.IORef
 import Data.List
 import Data.Maybe
-import FRP.Elerea.Delayed
+import FRP.Elerea.Legacy.Delayed
 import Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL
 

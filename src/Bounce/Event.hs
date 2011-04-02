@@ -6,7 +6,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Fix
 import Data.Maybe
-import FRP.Elerea.Delayed
+import FRP.Elerea.Legacy.Delayed
 
 import Util
 
