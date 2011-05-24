@@ -3,7 +3,7 @@
 module Vector where
 
 import Control.Applicative
-import FRP.Elerea.Legacy.Delayed
+import FRP.Elerea.Param
 import Graphics.Rendering.OpenGL
 
 data Vec = V { getX :: {-# UNPACK #-} !GLfloat, getY :: {-# UNPACK #-} !GLfloat }
@@ -40,7 +40,7 @@ instance Vector2D Vec GLfloat where
   vlen (V x y) = sqrt (x*x+y*y)
   V x1 y1 `mul` V x2 y2 = V (x1*x2) (y1*y2)
 
-instance Vector2D (Signal p Vec) (Signal p GLfloat) where
+instance Vector2D (Signal Vec) (Signal GLfloat) where
   (^+^) = liftA2 (^+^)
   (^-^) = liftA2 (^-^)
   (^*.) = liftA2 (^*.)

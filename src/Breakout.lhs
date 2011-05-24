@@ -21,17 +21,9 @@ needed.  Type safety is ensured all the way.
 
 <img src="Breakout.png" alt="Elerea Breakout in action" />
 
-You can also have the program output the signal structure in
-[Graphviz](http://www.graphviz.org/) dot format with the `--dump-dot`
-switch after the game is over.  For instance, if Graphviz is
-installed, you can get an SVG rendition of the graph using the
-following command:
-
-`elerea-breakout --dump-dot | dot -Tsvg -o breakout.svg`
-
 Below follows the full source of the example.
 
-> {-# LANGUAGE RecursiveDo #-}
+> {-# LANGUAGE DoRec #-}
 >
 > module Main where
 >
@@ -42,8 +34,7 @@ Below follows the full source of the example.
 > import Data.List
 > import Data.Maybe
 > import Data.Traversable hiding (mapM)
-> import FRP.Elerea.Legacy
-> import FRP.Elerea.Legacy.Graph
+> import FRP.Elerea.Param
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
 > import System.Environment
@@ -130,17 +121,11 @@ function, but part of the tiny `Utils` module .
 >
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
->   game <- createSignal $ breakout mousePosition windowSize
+>   game <- start (breakout mousePosition windowSize)
 >   driveNetwork game (readInput mousePositionSink closed)
 >
 >   -- The inevitable sad ending
 >   closeWindow
->
->   -- Providing input for graphviz
->   args <- getArgs
->   when ("--dump-dot" `elem` args) $ do
->     gameGraph <- signalToDot game
->     putStr gameGraph
 
 The `breakout` function creates a reactive signal that carries the
 rendering actions to be performed at each instant.  The principal
@@ -167,23 +152,29 @@ current state of the bricks, we have to define a flattened version,
 which carries the snapshots of all the brick signals.  This is the
 `brickSamples` signal.
 
-> breakout mousePos windowSize = mdo
+> breakout mousePos windowSize = do
 
 User-driven player position:
 
->   let playerX = adjustPlayerPos <$> mousePos <*> windowSize
->       adjustPlayerPos (V x _) (V w _) = min (fieldW-playerW) $ max (-fieldW) $ 2*x/w-1-playerW/2
+>   rec let playerX = adjustPlayerPos <$> mousePos <*> windowSize
+>           adjustPlayerPos (V x _) (V w _) = min (fieldW-playerW) $ max (-fieldW) $ 2*x/w-1-playerW/2
+>           (||@) = liftA2 (||)
+>           toMaybe c v = if c then Just v else Nothing
 
 Ball state: position and velocity.  We use a combination of
 `storeJust` and `toMaybe` to produce a latcher element that stores the
 value of a certain signal whenever a boolean control signal yields
-true.
+true.  We need to create delayed versions in order to have
+well-defined feedback loops.
 
->   ballPos <- integralVec ballPos0 ballVel
->   ballVel <- storeJust ballVel0 $
->              toMaybe <$> (ballCollHorz ||@ ballCollVert ||@ ballCollPlayer) <*>
->                          (adjustVel <$> ballCollHorz <*> ballCollVert <*> ballCollPlayer <*>
->                           ballVel <*> ballNewVelX)
+>       ballPos <- integralVec ballPos0 ballVel
+>       ballVel <- storeJust ballVel0 $
+>                  toMaybe <$> (ballCollHorz ||@ ballCollVert ||@ ballCollPlayer) <*>
+>                              (adjustVel <$> ballCollHorz <*> ballCollVert <*> ballCollPlayer <*>
+>                               ballVel' <*> ballNewVelX)
+>
+>       ballPos' <- delay ballPos0 ballPos
+>       ballVel' <- delay ballVel0 ballVel
 
 The `adjustVel` function calculates a candidate velocity for the next
 frame given collision information and the current velocity.  Even
@@ -192,10 +183,10 @@ we don't evaluate it at all thanks to the laziness of applicative
 nodes.  In the end, velocity is only recalculated when a collision is
 detected.
 
->   let adjustVel ch cv cp (V bvx bvy) bvx' = V x y
->           where x = (if ch then -1 else 1)*(if cp then bvx'*4 else bvx)
->                 y = if cv || cp then -bvy else bvy
->       ballNewVelX = (getX <$> ballPos)-playerX-pure (playerW/2)
+>       let adjustVel ch cv cp (V bvx bvy) bvx' = V x y
+>               where x = (if ch then -1 else 1)*(if cp then bvx'*4 else bvx)
+>                     y = if cv || cp then -bvy else bvy
+>           ballNewVelX = (getX <$> ballPos')-playerX-pure (playerW/2)
 
 Collision events are modelled with bool signals that turn true while
 the ball overlaps the offending surface and approaches it at the same
@@ -203,16 +194,16 @@ time.  Collision response will make sure that the second condition
 does not hold in the next instant, so there is no need to push these
 through an `edge` transfer function.
 
->       ballCollHorz = (or . map getBrickHColl <$> brickSamples)
->                      ||@ (check <$> ballPos <*> ballVel)
->           where check (V bx _) (V bvx _) = (bx < -fieldW && bvx < 0) ||
->                                            (bx > fieldW-ballW && bvx > 0)
->       ballCollVert = (or . map getBrickVColl <$> brickSamples)
->                      ||@ (check <$> ballPos <*> ballVel)
->           where check (V _ by) (V _ bvy) = by > fieldH-ballH && bvy > 0
->       ballCollPlayer = check <$> ballPos <*> ballVel <*> playerX
->           where check (V bx by) (V _ bvy) px = bvy < 0 &&
->                    doRectsIntersect bx by ballW ballH px playerY playerW playerH
+>           ballCollHorz = (any getBrickHColl <$> brickSamples')
+>                          ||@ (check <$> ballPos' <*> ballVel')
+>               where check (V bx _) (V bvx _) = (bx < -fieldW && bvx < 0) ||
+>                                                (bx > fieldW-ballW && bvx > 0)
+>           ballCollVert = (any getBrickVColl <$> brickSamples')
+>                          ||@ (check <$> ballPos' <*> ballVel')
+>               where check (V _ by) (V _ bvy) = by > fieldH-ballH && bvy > 0
+>           ballCollPlayer = check <$> ballPos' <*> ballVel' <*> playerX
+>               where check (V bx by) (V _ bvy) px = bvy < 0 &&
+>                        doRectsIntersect bx by ballW ballH px playerY playerW playerH
 
 Bricks are defined by the updater function `evolveBrick` as a
 transformer of the ball position.  The transfer function takes care of
@@ -223,27 +214,27 @@ we need to check collisions in order to update the state of the brick,
 it's simpler and more efficient to let the outer world see the results
 of these checks instead of having to recalculate them.
 
->   let brick (x,y) = transfer (x,y,Live,False,False) evolveBrick ballPos
->       getBrickData (x,y,s,_,_) = (x,y,s)
->       getBrickHColl (_,_,_,c,_) = c
->       getBrickVColl (_,_,_,_,c) = c
+>       let brick (x,y) = transfer (x,y,Live,False,False) evolveBrick ballPos
+>           getBrickData (x,y,s,_,_) = (x,y,s)
+>           getBrickHColl (_,_,_,c,_) = c
+>           getBrickVColl (_,_,_,_,c) = c
 >
->       evolveBrick dt _   (x,y,Dying a,_,_) = (x,y,Dying (a-realToFrac dt*brickFade),False,False)
->       evolveBrick dt (V bx by) (x,y,_,_,_) = (x,y,if isKilled then Dying 1 else Live,collHorz,collVert)
->           where isKilled = isHit || by < -fieldH-ballH
->                 isHit = doRectsIntersect bx by ballW ballH x y brickW brickH
->                 collHorz = isHit && isHorz
->                 collVert = isHit && not isHorz
->                 isHorz = xDist/brickW > yDist/brickH
->                     where xDist = abs ((x+brickW/2)-(bx+ballW/2))
->                           yDist = abs ((y+brickH/2)-(by+ballH/2))
+>           evolveBrick dt _   (x,y,Dying a,_,_) = (x,y,Dying (a-realToFrac dt*brickFade),False,False)
+>           evolveBrick dt (V bx by) (x,y,_,_,_) = (x,y,if isKilled then Dying 1 else Live,collHorz,collVert)
+>               where isKilled = isHit || by < -fieldH-ballH
+>                     isHit = doRectsIntersect bx by ballW ballH x y brickW brickH
+>                     collHorz = isHit && isHorz
+>                     collVert = isHit && not isHorz
+>                     isHorz = xDist/brickW > yDist/brickH
+>                         where xDist = abs ((x+brickW/2)-(bx+ballW/2))
+>                               yDist = abs ((y+brickH/2)-(by+ballH/2))
 
 The `isBrickNeeded` function is used to decide whether a brick should
 be kept in the collection.  As soon as it turns false, the brick in
 question is removed from the `bricks` signal.
 
->       isBrickNeeded (_,_,Dying a,_,_) = a > 0
->       isBrickNeeded (_,_,Live   ,_,_) = True
+>           isBrickNeeded (_,_,Dying a,_,_) = a > 0
+>           isBrickNeeded (_,_,Live   ,_,_) = True
 
 The `brickSamples` signal contains a snapshot of every brick, and it's
 obtained simply by traversing the collection (this is equivalent to
@@ -251,7 +242,9 @@ rebuilding the structure with lifted constructors), then applying a
 sampler, which collapses the two signal layers into one.  We take
 advantage of the fact that lists are instances of Traversable.
 
->       brickSamples = sampler (sequenceA <$> bricks)
+>           brickSamples = join (sequenceA <$> bricks)
+>
+>       brickSamples' <- delay [] brickSamples
 
 The `bricks` signal carries the dynamic list of bricks along with
 ball-brick collision information, all of which are updated in each
@@ -261,10 +254,10 @@ from the current one by filtering out the bricks for which
 `isBrickNeeded` evaluates to false.  These updates are made explicit
 by using `delay` to define the dynamic collection.
 
->   bricks <- do
->     bricksInit <- mapM brick brickPos0
->     let bricksNext = map snd . filter (isBrickNeeded . fst) <$> (zip <$> brickSamples <*> bricks)
->     delay bricksInit bricksNext
+>       bricks <- do
+>         bricksInit <- mapM brick brickPos0
+>         let bricksNext = map snd . filter (isBrickNeeded . fst) <$> (zip <$> brickSamples <*> bricks)
+>         delay bricksInit bricksNext
 
 And knowing all these signals we can finally assemble the signal of
 rendering actions, i.e. the animation:

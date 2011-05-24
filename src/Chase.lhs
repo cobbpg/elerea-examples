@@ -9,13 +9,14 @@ with the left mouse button.
 
 For a slightly more complex example check out `Breakout.lhs`.
 
-> {-# LANGUAGE RecursiveDo #-}
+> {-# LANGUAGE DoRec #-}
 >
 > module Main where
 >
 > import Control.Applicative
+> import Control.Monad
 > import Data.IORef
-> import FRP.Elerea.Legacy
+> import FRP.Elerea.Param
 > import Graphics.UI.GLFW as GLFW
 > import Graphics.Rendering.OpenGL
 >
@@ -23,39 +24,39 @@ For a slightly more complex example check out `Breakout.lhs`.
 > import Common.Vector
 
 The `main` function contains the whole reactive logic.  Note that
-`driveNetwork` is just a wrapper around the `superstep` function of
-the core library, and you can see its source below in the `Utils`
-module.
+`driveNetwork` is just a simple loop, and you can see its source below
+in the `Utils` module.
 
 > main = do
->   initialize
->   openWindow (Size 640 480) [DisplayRGBBits 8 8 8, DisplayAlphaBits 8, DisplayDepthBits 24] Window
->   windowTitle $= "Elerea Chase"
+>     initialize
+>     openWindow (Size 640 480) [DisplayRGBBits 8 8 8, DisplayAlphaBits 8, DisplayDepthBits 24] Window
+>     windowTitle $= "Elerea Chase"
 >
->   (windowSize,windowSizeSink) <- external vnull
->   (mousePosition,mousePositionSink) <- external vnull
->   (mousePress,mousePressSink) <- external False
+>     (windowSize,windowSizeSink) <- external vnull
+>     (mousePosition,mousePositionSink) <- external vnull
+>     (mousePress,mousePressSink) <- external False
 >
->   closed <- newIORef False
->   windowSizeCallback $= resizeGLScene windowSizeSink
->   windowCloseCallback $= writeIORef closed True
->   initGL 640 480
+>     closed <- newIORef False
+>     windowSizeCallback $= resizeGLScene windowSizeSink
+>     windowCloseCallback $= writeIORef closed True
+>     initGL 640 480
 >
->   greyPos <- createSignal $ mdo
+>     network <- start $ do
 >         mouseClick <- edge mousePress
+>         rec let newVel clk v0 = case clk of
+>                     True -> Just <$> integralVec v0 acc
+>                     False -> return Nothing
+>                 acc = (mousePosition^-^pos)^*.0.3
+>             vel0 <- integralVec vnull acc
+>             vels <- storeJust vel0 =<< generator (newVel <$> mouseClick <*> vel^+^pos^-^mousePosition)
+>             vel <- delay vnull (join vels)
+>             pos <- delay vnull =<< integralVec vnull vel
 >
->         let acc = (mousePosition^-^pos)^*.0.3
->         pos <- integralVec vnull vel
->         vel0 <- integralVec vnull acc
->         vel <- sampler <$> (storeJust vel0 . generator mouseClick)
->                (integralVec <$> vel^+^pos^-^mousePosition <*> pure acc)
+>         return $ render <$> windowSize <*> mousePosition <*> pos
 >
->         return pos
+>     driveNetwork network (readInput mousePositionSink mousePressSink closed)
 >
->   driveNetwork (render <$> windowSize <*> mousePosition <*> greyPos)
->                (readInput mousePositionSink mousePressSink closed)
->
->   closeWindow
+>     closeWindow
 
 The `render` function takes a snapshot of the system (window size and
 the positions of the squares) and turns it into OpenGL calls.  The

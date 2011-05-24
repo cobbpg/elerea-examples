@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, NoMonomorphismRestriction #-}
+{-# LANGUAGE DoRec, NoMonomorphismRestriction #-}
 
 module Main where
 
@@ -7,7 +7,7 @@ import Control.Monad
 import Data.IORef
 import Data.List
 import Data.Maybe
-import FRP.Elerea.Legacy.Delayed
+import FRP.Elerea.Param
 import Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL
 
@@ -32,26 +32,27 @@ data Ball = Ball { ballPos :: Vec
 -- * existing balls can be dragged and propelled with the left button,
 -- * dragging with the right button creates a rectangle; every ball
 --   within the rectangle is deleted when the button is released.
-bounceDemo renderFun mousePos mousePress = mdo
-  leftPress <- memo $ fst <$> mousePress
-  rightPress <- memo $ snd <$> mousePress
+bounceDemo renderFun mousePos mousePress = do
+  rec leftPress <- memo $ fst <$> mousePress
+      rightPress <- memo $ snd <$> mousePress
 
-  (killDrag,killNow) <- dragRectangle mousePos rightPress
-  killRect <- (vnull,vnull) --> killDrag
-  let within (V tlx tly,V brx bry) (V x y) = x > min tlx brx && x < max tlx brx &&
-                                             y > min tly bry && y < max tly bry
+      (killDrag,killNow) <- dragRectangle mousePos rightPress
+      killRect <- (vnull,vnull) --> killDrag
+      let within (V tlx tly,V brx bry) (V x y) = x > min tlx brx && x < max tlx brx &&
+                                                 y > min tly bry && y < max tly bry
 
-  ballList <- collectE newBallE $ \bs -> killNow &&@ (within <$> killRect <*> (ballPos <$> bs))
-  ballData <- memo $ sequence =<< ballList
-  -- Change edge to memo below to be able to add lots of balls with ease!
-  newBallCond <- edge $ leftPress &&@ (all (not.ballDrag) <$> ballData)
-  newBallE <- generator $ newBall <$> mousePos <*> newBallCond
-  let newBall pos cond = if cond
-                         then Just <$> ball pos mousePos leftPress
-                         else return Nothing
+      ballList <- collectE newBallE' $ \bs -> killNow &&@ (within <$> killRect <*> (ballPos <$> bs))
+      ballData <- memo $ sequence =<< ballList
+      -- Change edge to memo below to be able to add lots of balls with ease!
+      newBallCond <- edge $ leftPress &&@ (all (not.ballDrag) <$> ballData)
+      newBallE <- generator $ newBall <$> mousePos <*> newBallCond
+      newBallE' <- delay Nothing newBallE
+      let newBall pos cond = if cond
+                             then Just <$> ball pos mousePos leftPress
+                             else return Nothing
 
-  frameCount <- stateful 0 (const (+1))
-  fps <- derivT 2 frameCount
+      frameCount <- stateful 0 (const (+1))
+      fps <- derivT 2 frameCount
 
   return $ renderFun <$> ballData <*> killDrag <*> fps
 
@@ -71,21 +72,23 @@ dragRectangle mousePos mousePress = do
 
 -- A ball that bounces within the box and can be dragged. It flashes
 -- every time its velocity changes.
-ball initPos mousePos mousePress = mdo
-  mouseDown <- edge mousePress
-  let dragBegin = mouseDown &&@ (vlen (pos^-^mousePos) <@ ballSize/2)
-  dragEnd <- edge (not <$> mousePress)
-  drag <- flipflop dragBegin dragEnd
-  dragVel <- derivTV 0.05 mousePos
+ball initPos mousePos mousePress = do
+  rec mouseDown <- edge mousePress
+      let dragBegin = mouseDown &&@ (vlen (pos'^-^mousePos) <@ ballSize/2)
+      dragEnd <- edge (not <$> mousePress)
+      drag <- flipflop dragBegin dragEnd
+      dragVel <- derivTV 0.05 mousePos
 
-  let collHorz (V vx _) (V px _) = collFrame vx px
-      collVert (V _ vy) (V _ py) = collFrame vy py
-      collFrame v p = abs (p-0.5) > 0.5-(frameThickness+ballSize/2) && (p-0.5)*v > 0
-  pos <- integralV initPos vel
-  vel <- vnull --> velE
-  velE <- memo $ mergeE [ifE drag dragVel,
-                         ifE (collHorz <$> vel <*> pos) (mul (V (-1) 1) <$> vel),
-                         ifE (collVert <$> vel <*> pos) (mul (V 1 (-1)) <$> vel)]
+      let collHorz (V vx _) (V px _) = collFrame vx px
+          collVert (V _ vy) (V _ py) = collFrame vy py
+          collFrame v p = abs (p-0.5) > 0.5-(frameThickness+ballSize/2) && (p-0.5)*v > 0
+      pos <- integralV initPos vel
+      pos' <- delay initPos pos
+      vel <- vnull --> velE
+      vel' <- delay vnull vel
+      velE <- memo $ mergeE [ifE drag dragVel,
+                             ifE (collHorz <$> vel' <*> pos') (mul (V (-1) 1) <$> vel'),
+                             ifE (collVert <$> vel' <*> pos') (mul (V 1 (-1)) <$> vel')]
 
   colour <- ballColour (isJust <$> velE)
 
