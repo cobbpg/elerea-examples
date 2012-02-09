@@ -116,7 +116,7 @@ function, but part of the tiny `Utils` module .
 >   -- Wrapping up the init phase
 >   closed <- newIORef False
 >   windowSizeCallback $= resizeGLScene windowSizeSink
->   windowCloseCallback $= writeIORef closed True
+>   windowCloseCallback $= (writeIORef closed True >> return True)
 >   initGL 640 480
 >
 >   -- All we need to get going is an IO-valued signal and an IO

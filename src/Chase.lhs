@@ -38,7 +38,7 @@ in the `Utils` module.
 >
 >     closed <- newIORef False
 >     windowSizeCallback $= resizeGLScene windowSizeSink
->     windowCloseCallback $= writeIORef closed True
+>     windowCloseCallback $= (writeIORef closed True >> return True)
 >     initGL 640 480
 >
 >     network <- start $ do

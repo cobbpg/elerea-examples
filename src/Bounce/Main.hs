@@ -119,7 +119,7 @@ main = do
 
   closed <- newIORef False
   windowSizeCallback $= resizeGLScene
-  windowCloseCallback $= writeIORef closed True
+  windowCloseCallback $= (writeIORef closed True >> return True)
   initGL 800 800
 
   unitCircle <- defineNewList Compile $ renderPrimitive TriangleStrip $ forM_ [0..20] $ \i -> do
