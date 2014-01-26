@@ -48,13 +48,13 @@ derivTV wt s = do
           where t' = dt+t
 
 {-| Scalar moving average of a given number of recent samples. -}
-movingAvg :: (Fractional a) => a -> Signal a -> SignalGen p (Signal a)
+movingAvg :: (Eq a, Fractional a) => a -> Signal a -> SignalGen p (Signal a)
 movingAvg n s = do
   sig <- scanM n (delay 0) s
   return $ ((/n).sum) <$> sequence sig
 
 {-| Vector moving average of a given number of recent samples. -}
-movingAvgV :: (Vector2D v c, Num c) => c -> Signal v -> SignalGen p (Signal v)
+movingAvgV :: (Eq c, Vector2D v c, Num c) => c -> Signal v -> SignalGen p (Signal v)
 movingAvgV n s = do
   sig <- scanM n (delay vnull) s
   return $ ((^/.n).foldl1' (^+^)) <$> sequence sig
