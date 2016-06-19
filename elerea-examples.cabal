@@ -1,6 +1,6 @@
 Name:                elerea-examples
 Version:             2.9.0
-Cabal-Version:       >= 1.2
+Cabal-Version:       >= 1.6
 Synopsis:            Example applications for Elerea
 Category:            reactivity, FRP
 Description:
