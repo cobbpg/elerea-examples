@@ -110,8 +110,8 @@ function, but part of the tiny `Utils` module .
 >   windowTitle $= "Elerea Breakout"
 >
 >   -- External signals available for the game logic
->   (windowSize,windowSizeSink) <- external vnull
->   (mousePosition,mousePositionSink) <- external vnull
+>   (windowSizeGen,windowSizeSink) <- external vnull
+>   (mousePositionGen,mousePositionSink) <- external vnull
 >
 >   -- Wrapping up the init phase
 >   closed <- newIORef False
@@ -121,7 +121,10 @@ function, but part of the tiny `Utils` module .
 >
 >   -- All we need to get going is an IO-valued signal and an IO
 >   -- function to update the external signals
->   game <- start (breakout mousePosition windowSize)
+>   game <- start $ do
+>     mousePosition <- mousePositionGen
+>     windowSize <- windowSizeGen
+>     breakout mousePosition windowSize
 >   driveNetwork game (readInput mousePositionSink closed)
 >
 >   -- The inevitable sad ending

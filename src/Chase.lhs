@@ -32,9 +32,9 @@ in the `Utils` module.
 >     openWindow (Size 640 480) [DisplayRGBBits 8 8 8, DisplayAlphaBits 8, DisplayDepthBits 24] Window
 >     windowTitle $= "Elerea Chase"
 >
->     (windowSize,windowSizeSink) <- external vnull
->     (mousePosition,mousePositionSink) <- external vnull
->     (mousePress,mousePressSink) <- external False
+>     (windowSizeGen,windowSizeSink) <- external vnull
+>     (mousePositionGen,mousePositionSink) <- external vnull
+>     (mousePressGen,mousePressSink) <- external False
 >
 >     closed <- newIORef False
 >     windowSizeCallback $= resizeGLScene windowSizeSink
@@ -42,6 +42,9 @@ in the `Utils` module.
 >     initGL 640 480
 >
 >     network <- start $ do
+>         mousePress <- mousePressGen
+>         mousePosition <- mousePositionGen
+>         windowSize <- windowSizeGen
 >         mouseClick <- edge mousePress
 >         rec let newVel clk v0 = case clk of
 >                     True -> Just <$> integralVec v0 acc
